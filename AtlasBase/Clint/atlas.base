@@ -35870,6 +35870,7 @@ double *TimeOnCores(struct kmm_struct *kb)
    unsigned char *chkin;
 
    p = kb->p;
+   if (p < 2) { kb->iam = 0; TimeOnCore(kb); return(&(kb->mf)); }
    kp = malloc(sizeof(struct kmm_struct)*p);
    threads = malloc(sizeof(pthread_t)*p);
    attr = malloc(sizeof(pthread_attr_t)*p);
