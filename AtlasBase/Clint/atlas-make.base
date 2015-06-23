@@ -2842,7 +2842,7 @@ x@(pre)ammtime_pt : force_build
 @ptyp !
 	$(ATLRUN) $(MMTdir) x@(pre)ammtime_pt -p $(NPROC) -m $(mb) -n $(nb) \
            -k $(kb) -um $(mu) -un $(nu) -uk $(ku) -R $(FMF) \
-           -Ma $(mvA) -Mb $(mvB) -Mc $(mvC) $(outF)
+           -Ma $(mvA) -Mb $(mvB) -Mc $(mvC) $(TIDLIST) $(outF)
 @(pre)mmtime_pt.o : $(mySRCdir)/mmtime_pt.c
 	$(KC) $(KCFLAGS) -c -D@(typ) -o @(pre)mmtime_pt.o \
                $(mySRCdir)/mmtime_pt.c

@@ -35846,6 +35846,7 @@ double *TimeOnCores(struct kmm_struct *kb)
    unsigned char *chkin;
 
    p = kb->p;
+   if (p < 2) { kb->iam = 0; TimeOnCore(kb); return(&(kb->mf)); }
    kp = malloc(sizeof(struct kmm_struct)*p);
    threads = malloc(sizeof(pthread_t)*p);
    attr = malloc(sizeof(pthread_attr_t)*p);
@@ -35978,6 +35979,7 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
          kp->reps = atoi(args[i]);
          break;
       case 'P':
+      case 't':
          if (++i >= nargs)
             PrintUsage(args[0], i, "out of arguments");
          kp->p = atoi(args[i]);

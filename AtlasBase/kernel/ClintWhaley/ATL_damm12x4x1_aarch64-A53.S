@@ -1,0 +1,429 @@
+/* This file is written for Cortex-A57. Works with 12x4 access-major storage. */
+#ifndef ATL_GAS_ARM64
+   #error "This routine requires GAS/AARCH64 assembly."
+#endif
+
+#include "atlas_asm.h"
+
+/*
+                     x0       x1     x2         x3         x4        x5
+void ATL_USERMM(SZT nmu, SZT nnu, SZT K, CTYPE *pA, CTYPE *pB, TYPE *pC, 
+                  CTYPE *pAn, CTYPE *pBn, CTYPE *pCn);
+                         x6           x7         0
+ */
+
+#define FSIZE (8*8) /* to save d8-d15 regs */
+
+#if defined(SREAL) || defined(SCPLX)
+   #define TP 4s
+#else
+   #define TP 2d
+#endif
+
+#define qA0 q0
+#define rA0 Mjoin(v0.,TP)
+#define qA1 q1
+#define rA1 Mjoin(v1.,TP)
+#define qA2 q2
+#define rA2 Mjoin(v2.,TP)
+#define qA3 q3
+#define rA3 Mjoin(v3.,TP)
+#define qA4 q4
+#define rA4 Mjoin(v4.,TP)
+#define qA5 q5
+#define rA5 Mjoin(v5.,TP)
+
+#if defined(SREAL) || defined(SCPLX)
+   #define qB0 q6
+   #define rB0 v6.s[0]
+   #define rB1 v6.s[1]
+   #define rB2 v6.s[2]
+   #define rB3 v6.s[3]
+#else
+   #define qB0 q6
+   #define rB0 v6.d[0]
+   #define rB1 v6.d[1]
+
+   #define qB1 q7
+   #define rB2 v7.d[0]
+   #define rB3 v7.d[1]
+#endif
+
+#define qC00 q8
+#define rC00 Mjoin( v8.,TP)
+#define qC01 q9
+#define rC01 Mjoin( v9.,TP)
+#define qC02 q10
+#define rC02 Mjoin(v10.,TP)
+#define qC03 q11
+#define rC03 Mjoin(v11.,TP)
+
+#define qC10 q12
+#define rC10 Mjoin(v12.,TP)
+#define qC11 q13
+#define rC11 Mjoin(v13.,TP)
+#define qC12 q14
+#define rC12 Mjoin(v14.,TP)
+#define qC13 q15
+#define rC13 Mjoin(v15.,TP)
+
+#define qC20 q16
+#define rC20 Mjoin(v16.,TP)
+#define qC21 q17
+#define rC21 Mjoin(v17.,TP)
+#define qC22 q18
+#define rC22 Mjoin(v18.,TP)
+#define qC23 q19
+#define rC23 Mjoin(v19.,TP)
+
+#define qC30 q20
+#define rC30 Mjoin(v20.,TP)
+#define qC31 q21
+#define rC31 Mjoin(v21.,TP)
+#define qC32 q22
+#define rC32 Mjoin(v22.,TP)
+#define qC33 q23
+#define rC33 Mjoin(v23.,TP)
+
+#define qC40 q24
+#define rC40 Mjoin(v24.,TP)
+#define qC41 q25
+#define rC41 Mjoin(v25.,TP)
+#define qC42 q26
+#define rC42 Mjoin(v26.,TP)
+#define qC43 q27
+#define rC43 Mjoin(v27.,TP)
+
+#define qC50 q28
+#define rC50 Mjoin(v28.,TP)
+#define qC51 q29
+#define rC51 Mjoin(v29.,TP)
+#define qC52 q30
+#define rC52 Mjoin(v30.,TP)
+#define qC53 q31
+#define rC53 Mjoin(v31.,TP)
+
+/* Define integer registers as needed. */
+
+#define nmu       x0 /* arg */
+#define nnu0      x1 /* arg */
+#define KK0       x2 /* arg */
+#define pA0       x3 /* arg */
+#define pB0       x4 /* arg */
+#define pC        x5 /* arg */
+#define pAn       x6 /* arg */
+#define pBn       x7 /* arg */
+#define pCn       x9 /* arg: load from SP(0) (shouldn't use x8) */
+
+#if defined(SREAL) || defined(SCPLX)
+   #define incBk     #16   /* incBk = NU*sizeof */
+#else
+   #define incBk     #32   /* incBk = NU*sizeof */
+#endif
+
+#define incAk     #96   /* incAk = MU*sizeof */
+#define incCb     #384  /* incCb = MU*NU*sizeof */
+#define incAm     x10   /* incAm = MU*sizeof*K */
+
+/* Now define the dupliate registers */
+#define KK       x11 /* copy from args */
+#define nnu      x12 /* copy from args */
+#define pA       x13 /* copy from args */
+#define pB       x14 /* copy from args */
+
+/* Now define the prefetch instructions/regs/constants */
+#ifndef PFADIST
+   #define PFADIST 288
+#endif
+#ifndef PFBDIST
+   #define PFBDIST 96
+#endif
+#ifndef PFCDIST
+   #define PFCDIST 96
+#endif
+
+#ifndef prefA
+   #define prefA(base, off) prfm PLDL1KEEP, [base, #(off)]
+#endif
+#ifndef prefB
+   #define prefB(base, off) prfm PLDL1KEEP, [base, #(off)]
+#endif
+#ifndef prefC
+   #define prefC(base, off) prfm PLDL2KEEP, [base, #(off)]
+#endif
+
+#if defined(DREAL) || defined(DCPLX)
+   #define DBL_LD ldr qB1, [pB, #16] 
+#else 
+   #define DBL_LD 
+#endif
+
+/*
+ * Re-arranging unrolled instructions doesn't help. So each iteration 
+ * is replaced by this macro. The macro was parameterized for the 
+ * first iteration of beta=0 case. But for some reason, peeling the 
+ * first iteration of K-loop, hurts performance. 
+ * - PREFETCH IS HURTING A LOT (20%) .
+ */
+
+#define KLOOP_ITER1(op) \
+   ldr qB0, [pB] ; \
+   DBL_LD ; \
+   ldr qA0, [pA] ; \
+   ldr qA1, [pA, #(1*16)] ; \
+   ldr qA2, [pA, #(2*16)] ; \
+   ldr qA3, [pA, #(3*16)] ; \
+   ldr qA4, [pA, #(4*16)] ; \
+   ldr qA5, [pA, #(5*16)] ; \
+   add pB, pB, incBk ; \
+   add pA, pA, incAk ; \
+ ; \
+   op rC00, rA0, rB0 ; \
+   op rC01, rA0, rB1 ; \
+   op rC02, rA0, rB2 ; \
+   op rC03, rA0, rB3 ; \
+ ; \
+   op rC10, rA1, rB0 ; \
+   op rC11, rA1, rB1 ; \
+   op rC12, rA1, rB2 ; \
+   op rC13, rA1, rB3 ; \
+ ; \
+   op rC20, rA2, rB0 ; \
+   op rC21, rA2, rB1 ; \
+   op rC22, rA2, rB2 ; \
+   op rC23, rA2, rB3 ; \
+ ; \
+   op rC30, rA3, rB0 ; \
+   op rC31, rA3, rB1 ; \
+   op rC32, rA3, rB2 ; \
+   op rC33, rA3, rB3 ; \
+ ; \
+   op rC40, rA4, rB0 ; \
+   op rC41, rA4, rB1 ; \
+   op rC42, rA4, rB2 ; \
+   op rC43, rA4, rB3 ; \
+ ; \
+   op rC50, rA5, rB0 ; \
+   op rC51, rA5, rB1 ; \
+   op rC52, rA5, rB2 ; \
+   op rC53, rA5, rB3
+
+.text
+.align 5
+.global ATL_asmdecor(ATL_USERMM)
+.type ATL_asmdecor(ATL_USERMM), %function
+ATL_asmdecor(ATL_USERMM):
+/*
+ * Save callee-saved regs
+ */
+   sub SP, SP, #FSIZE
+   stp  d8,  d9, [SP,  #0]
+   stp d10, d11, [SP, #16]
+   stp d12, d13, [SP, #32]
+   stp d14, d15, [SP, #48]
+
+   /* Save registers that will be destroyed inside loops */
+   mov pA, pA0
+   mov pB, pB0
+   mov KK, KK0
+   mov nnu, nnu0
+   prefA(pA, 0)
+
+   /* Load the remaining args from stack */
+   /*ldr pCn, [SP, #FSIZE]*/
+
+   /* incAm = MU*sizeof*K = 12*8*K = 3*32*K */
+   add incAm, KK, KK, LSL #1     /* incAm = 3*K */
+   lsl incAm, incAm, #5          /* incAm = (3*K) * 32 */
+
+
+   .align 5
+   MLOOP:
+      NLOOP:
+         #ifndef BETA0
+            ldr qC00, [pC, #( 0*16)]
+            ldr qC10, [pC, #( 1*16)]
+            ldr qC20, [pC, #( 2*16)]
+            ldr qC30, [pC, #( 3*16)]
+            ldr qC40, [pC, #( 4*16)]
+            ldr qC50, [pC, #( 5*16)]
+            ldr qC01, [pC, #( 6*16)]
+            ldr qC11, [pC, #( 7*16)]
+            ldr qC21, [pC, #( 8*16)]
+            ldr qC31, [pC, #( 9*16)]
+            ldr qC41, [pC, #(10*16)]
+            ldr qC51, [pC, #(11*16)]
+            ldr qC02, [pC, #(12*16)]
+            ldr qC12, [pC, #(13*16)]
+            ldr qC22, [pC, #(14*16)]
+            ldr qC32, [pC, #(15*16)]
+            ldr qC42, [pC, #(16*16)]
+            ldr qC52, [pC, #(17*16)]
+            ldr qC03, [pC, #(18*16)]
+            ldr qC13, [pC, #(19*16)]
+            ldr qC23, [pC, #(20*16)]
+            ldr qC33, [pC, #(21*16)]
+            ldr qC43, [pC, #(22*16)]
+            ldr qC53, [pC, #(23*16)]
+            /* if beta is -1, negate the loaded C's (FMLS can't be used) */
+            #ifdef BETAN1
+               fneg rC00, rC00
+               fneg rC01, rC01
+               fneg rC02, rC02
+               fneg rC03, rC03
+               fneg rC10, rC10
+               fneg rC11, rC11
+               fneg rC12, rC12
+               fneg rC13, rC13
+               fneg rC20, rC20
+               fneg rC21, rC21
+               fneg rC22, rC22
+               fneg rC23, rC23
+               fneg rC30, rC30
+               fneg rC31, rC31
+               fneg rC32, rC32
+               fneg rC33, rC33
+               fneg rC40, rC40
+               fneg rC41, rC41
+               fneg rC42, rC42
+               fneg rC43, rC43
+               fneg rC50, rC50
+               fneg rC51, rC51
+               fneg rC52, rC52
+               fneg rC53, rC53
+            #endif
+         #else
+         #if 0
+            /* to avoid zeroing, peel the first iteration */
+            KLOOP_ITER1(fmul)
+            KLOOP_ITER1(fmla)
+            KLOOP_ITER1(fmla)
+            KLOOP_ITER1(fmla)
+            KLOOP_ITER1(fmla)
+            KLOOP_ITER1(fmla)
+
+            subs KK, KK, #6
+            beq KDONE
+         #else
+            eor v8.16b, v8.16b, v8.16b
+            eor v9.16b, v9.16b, v9.16b
+            eor v10.16b, v10.16b, v10.16b
+            eor v11.16b, v11.16b, v11.16b
+            eor v12.16b, v12.16b, v12.16b
+            eor v13.16b, v13.16b, v13.16b
+            eor v14.16b, v14.16b, v14.16b
+            eor v15.16b, v15.16b, v15.16b
+            eor v16.16b, v16.16b, v16.16b
+            eor v17.16b, v17.16b, v17.16b
+            eor v18.16b, v18.16b, v18.16b
+            eor v19.16b, v19.16b, v19.16b
+            eor v20.16b, v20.16b, v20.16b
+            eor v21.16b, v21.16b, v21.16b
+            eor v22.16b, v22.16b, v22.16b
+            eor v23.16b, v23.16b, v23.16b
+            eor v24.16b, v24.16b, v24.16b
+            eor v25.16b, v25.16b, v25.16b
+            eor v26.16b, v26.16b, v26.16b
+            eor v27.16b, v27.16b, v27.16b
+            eor v28.16b, v28.16b, v28.16b
+            eor v29.16b, v29.16b, v29.16b
+            eor v30.16b, v30.16b, v30.16b
+            eor v31.16b, v31.16b, v31.16b
+         #endif
+         #endif
+
+         .align 5
+         KLOOP:
+
+            ldr qB0, [pB] ; 
+            DBL_LD ; 
+            ldr qA0, [pA] ; 
+            ldr qA1, [pA, #(1*16)] ; 
+            ldr qA2, [pA, #(2*16)] ; 
+            ldr qA3, [pA, #(3*16)] ; 
+            ldr qA4, [pA, #(4*16)] ; 
+            ldr qA5, [pA, #(5*16)] ; 
+            add pB, pB, incBk ; 
+            add pA, pA, incAk ; 
+          ; 
+            fmla rC00, rA0, rB0 ; 
+            fmla rC01, rA0, rB1 ; 
+            fmla rC02, rA0, rB2 ; 
+            fmla rC03, rA0, rB3 ; 
+          ; 
+            fmla rC10, rA1, rB0 ; 
+            fmla rC11, rA1, rB1 ; 
+            fmla rC12, rA1, rB2 ; 
+            fmla rC13, rA1, rB3 ; 
+          ; 
+            fmla rC20, rA2, rB0 ; 
+            fmla rC21, rA2, rB1 ; 
+            fmla rC22, rA2, rB2 ; 
+            fmla rC23, rA2, rB3 ; 
+          ; 
+            fmla rC30, rA3, rB0 ; 
+            fmla rC31, rA3, rB1 ; 
+            fmla rC32, rA3, rB2 ; 
+            fmla rC33, rA3, rB3 ; 
+          ; 
+            fmla rC40, rA4, rB0 ; 
+            fmla rC41, rA4, rB1 ; 
+            fmla rC42, rA4, rB2 ; 
+            fmla rC43, rA4, rB3 ; 
+          ; 
+            fmla rC50, rA5, rB0 ; 
+            fmla rC51, rA5, rB1 ; 
+            fmla rC52, rA5, rB2 ; 
+            fmla rC53, rA5, rB3
+
+            subs KK, KK, #1
+         bne KLOOP
+
+      KDONE:
+         mov KK, KK0
+         mov pA, pA0
+            str qC00, [pC, #( 0*16)]
+            str qC10, [pC, #( 1*16)]
+            str qC20, [pC, #( 2*16)]
+            str qC30, [pC, #( 3*16)]
+            str qC40, [pC, #( 4*16)]
+            str qC50, [pC, #( 5*16)]
+            str qC01, [pC, #( 6*16)]
+            str qC11, [pC, #( 7*16)]
+            str qC21, [pC, #( 8*16)]
+            str qC31, [pC, #( 9*16)]
+            str qC41, [pC, #(10*16)]
+            str qC51, [pC, #(11*16)]
+            str qC02, [pC, #(12*16)]
+            str qC12, [pC, #(13*16)]
+            str qC22, [pC, #(14*16)]
+            str qC32, [pC, #(15*16)]
+            str qC42, [pC, #(16*16)]
+            str qC52, [pC, #(17*16)]
+            str qC03, [pC, #(18*16)]
+            str qC13, [pC, #(19*16)]
+            str qC23, [pC, #(20*16)]
+            str qC33, [pC, #(21*16)]
+            str qC43, [pC, #(22*16)]
+            str qC53, [pC, #(23*16)]
+         add pC, pC, incCb
+
+         subs nnu, nnu, #1
+      bne NLOOP
+
+   NDONE:
+      mov nnu, nnu0
+      add pA, pA0, incAm
+      add pA0, pA0, incAm
+      mov pB, pB0
+
+      subs nmu, nmu, #1
+   bne MLOOP
+
+DONE:
+   ldp  d8,  d9, [SP,  #0]
+   ldp d10, d11, [SP, #16]
+   ldp d12, d13, [SP, #32]
+   ldp d14, d15, [SP, #48]
+   add SP, SP, #FSIZE
+   ret
