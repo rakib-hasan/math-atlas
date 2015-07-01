@@ -880,6 +880,7 @@ acnt_mut = $(THRdir)/ATL_SetAtomicCount_mut_mut.o \
 
 IThreadTune :
 	- $(MAKE) ITune_aff
+        - $(MAKE) ITune_cluster
 	$(MAKE) iTune_atomic
 	$(MAKE) MakeThreadSum
 force_build :
@@ -904,6 +905,10 @@ IRun_aff : xprobe_aff force_build
 	- rm res/probe.out
 	./xprobe_aff -v 1 -o $(INCAdir)/atlas_taffinity.h $(TIDLIST)
 
+ITune_cluster: xprobe_cluster
+	./xprobe_cluster -v 1 -t $(NPROC) -o $(INCAdir)/atlas_cluster.h \
+	    $(TIDLIST)
+
 IRun_nthr : IRun_aff xprobe_nthr
 	rm -f $(INCAdir)/atlas_pthreads.h
 	./xprobe_nthr -o $(INCAdir)/atlas_pthreads.h
@@ -911,6 +916,9 @@ ITune_aff : IRun_nthr xtune_aff
 	$(ATLRUN) $(myBLDdir) xtune_aff -o $(INCAdir)/atlas_taffinity.h
 tlib : 
 	cd $(BLDdir)/src/threads ; $(MAKE)
+
+xprobe_cluster : probe_cluster.o atlconf_misc.o
+	$(XCC) $(XCCFLAGS) -o $@ probe_cluster.o atlconf_misc.o $(LIBS)
 
 xprobe_aff : probe_aff.o atlconf_misc.o
 	$(XCC) $(XCCFLAGS) -o xprobe_aff probe_aff.o atlconf_misc.o $(LIBS)
@@ -1079,7 +1087,7 @@ ATL_@(rt)AtomicCount_arch.o : ATL_@(rt)AtomicCount_arch.c
 test_count_glb.o : $(mySRCdir)/test_count.c
 	$(CC) $(CCFLAGS) -DATL_GLOBAL -o test_count_glb.o \
               -c $(mySRCdir)/test_count.c
-@whiledef rt probe_aff atlconf_misc
+@whiledef rt probe_aff atlconf_misc probe_cluster
 @(rt).o : $(CONFdir)/src/@(rt).c
 	$(XCC) $(XCCFLAGS) -I$(CONFdir)/include -c -o $@ \
                $(CONFdir)/src/@(rt).c
