@@ -449,7 +449,7 @@ enum MACHTYPE Chip2Mach(enum CHIP chip, int model, int x8664)
 @ROUT archinfo_x86 arch_getflags
 void PrintUsage(char *name, int i)
 {
-   fprintf(stderr, "USAGE: %s -v (verb) -b (@ bits) -a (arch) -n (ncpu) -c <ncache> -C <lvl> (cache size) -m (Mhz) -t (cpu throttling)\n", name);
+   fprintf(stderr, "USAGE: %s -v (verb) -b (@ bits) -a (arch) -n (ncpu) -c <ncache> -C <lvl> (cache size) -m (Mhz) -t (cpu throttling) -P (cpu clusters)\n", name);
    exit(i);
 }
 
@@ -488,6 +488,9 @@ int GetFlags(int nargs, char **args, int *CacheLevel)
          break;
       case 't':
          flag |= Pthrottle;
+         break;
+      case 'P':
+         flag |= Pcluster;
          break;
       default:
          PrintUsage(args[0], i);
@@ -1233,6 +1236,60 @@ int ProbeMhz()
    return(mhz);
 }
 
+int ProbeCluster()
+/*
+ * RETURNS: number of different CPU clusters found.
+ */
+{
+   int iret=1;
+@ROUT archinfo_sunos archinfo_irix archinfo_aix archinfo_SFU archinfo_win
+/*
+ * I have no idea how to do this for SunOS/Irix/AIX/Windows/interix
+ */
+@ROUT archinfo_freebsd archinfo_linux
+   int imax=0;
+   char *res;
+
+@ROUT archinfo_linux
+/*
+ * For now, check for cpuinfo_max_freq for all CPUs.
+ * If all are same, then there is only one cluster.
+ */
+   int ncpu = ProbeNCPU();
+   int *freqs = malloc(sizeof(int)*ncpu);
+   int i, j, ncluster = 0;
+   char *frm = "cat /sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq";
+   char fnam[256];
+   for (i=0; i<ncpu; i++)
+   {
+      sprintf(fnam, frm, i);
+      res = atlsys_1L(NULL, fnam, 0, 0);
+      if (res)
+      {
+         imax = GetFirstInt(res);
+         free(res);
+         for (j=0; j<ncluster; j++)
+         {
+            if (freqs[j] == imax)
+               break;
+         }
+         if (j == ncluster) /* loop was exhausted, so new cluster */
+         {
+            freqs[ncluster] = imax;
+            ncluster++;
+         }
+      }
+   }
+   iret = ncluster;
+@ROUT archinfo_freebsd
+/*
+ * Not implemented yet!
+ */
+@ROUT archinfo_freebsd archinfo_linux archinfo_sunos archinfo_irix @\
+      archinfo_aix archinfo_SFU archinfo_win
+   return(iret);
+}
+
 int ProbeThrottle()
 /*
  * RETURNS: 1 if cpu throttling is detected, 0 otherwise
@@ -1322,6 +1379,8 @@ main(int nargs, char **args)
       printf("CPU MHZ=%d\n", ProbeMhz());
    if (flags & Pthrottle)
       printf("CPU THROTTLE=%d\n", ProbeThrottle());
+   if (flags & Pcluster)
+      printf("CPU CLUSTER=%d\n", ProbeCluster());
    if (flags & P64)
    {
       bits = ProbePointerBits(&sure);

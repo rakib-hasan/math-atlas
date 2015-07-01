@@ -20870,6 +20870,87 @@ float SECOND(void) { return((float)time00()); }
       t0 = clock();
       return(0.0);
    }
+#elif defined(UseJunoPower)
+/*
+ * Striped-down version oc Chris A Jones' code. Added by Rakib Hasan.
+ * From http://gitlab.ausrd.arm.com/cadeniyi/juno-energy-meter-code/tree/master
+ */
+   #include <stdint.h>
+   #include <stdlib.h>
+   #include <sys/mman.h>
+   #include <sys/fcntl.h>
+
+   #define APB_BASE_MEMORY 0x1C010000
+   #define APB_SIZE 0x120
+   #define A57_OFF ((0xD0/4)+14)
+   #define A53_OFF ((0xD0/4)+16)
+   #define A57_SCALE_FOR_J (1.62e-10)
+   #define A53_SCALE_FOR_J (8.1e-11)
+   #if defined(ForA53)
+      #define CL_OFF A53_OFF
+      #define SCALE_FOR_J A53_SCALE_FOR_J
+   #else
+      #define CL_OFF A57_OFF
+      #define SCALE_FOR_J A57_SCALE_FOR_J
+   #endif
+   double ATL_walltime(void)
+   {
+      static __thread int pfd = -1;
+      static __thread void *mmap_base = NULL;
+      uint32_t *buffer;
+      uint64_t energy;
+      if (pfd < 0)
+      {
+         pfd = open("/dev/mem", O_RDONLY);
+         if (pfd < 0)
+            return((double)(0));
+         mmap_base = mmap(NULL, APB_SIZE, PROT_READ, MAP_SHARED,
+                           pfd, APB_BASE_MEMORY);
+         if (mmap_base == MAP_FAILED)
+         {
+            close(pfd);
+            pfd = 0;
+            return((double)(0));
+         }
+      }
+      buffer = (uint32_t *)(mmap_base);
+      energy = buffer[CL_OFF];  /* NOTE: for now, use only A57 */
+      energy |= ((uint64_t)(buffer[CL_OFF+1])) << 32;
+      return((double)(energy*SCALE_FOR_J));
+   }
+#elif defined(ArmCPS) && defined(ATL_USE_PERF)
+   #include <stdlib.h>
+   #include <sys/ioctl.h>
+   #include <linux/perf_event.h>
+   #include <syscall.h>
+   double ATL_walltime(void)
+   {
+      static const double TickTime = 1.0 / (ArmCPS*1.0E6);
+      long long count;
+      static __thread long cfd = 0;
+      if (cfd)
+      {
+         read(cfd, &count, sizeof(long long));
+         return(count*TickTime);
+      }
+      else
+      {
+         struct perf_event_attr pe;
+         int hw_event = PERF_COUNT_HW_CPU_CYCLES;
+         memset(&pe, 0, sizeof(struct perf_event_attr));
+         pe.type = PERF_TYPE_HARDWARE;
+         pe.size = sizeof(struct perf_event_attr);
+         pe.config = hw_event;
+         pe.disabled = 0;
+         pe.exclude_kernel = 1;
+         pe.exclude_hv = 1;
+         cfd = syscall(__NR_perf_event_open, &pe, 0, -1, -1, 0);
+         if (cfd == -1)
+            ATL_assert(0);
+         read(cfd, &count, sizeof(long long));
+         return(count*TickTime);
+      }
+   }
 #else
    #include <stdlib.h>
    #include <sys/time.h>
@@ -35846,7 +35927,19 @@ double *TimeOnCores(struct kmm_struct *kb)
    unsigned char *chkin;
 
    p = kb->p;
-   if (p < 2) { kb->iam = 0; TimeOnCore(kb); return(&(kb->mf)); }
+   if (p < 2)
+   {
+      mflops = malloc(sizeof(double));
+      chkin = malloc(sizeof(char));
+      assert(mflops && chkin);
+      chkin[0] = 0;
+      kb->chkin = chkin;
+      kb->iam = 0;
+      TimeOnCore(kb);
+      mflops[0] = kb->mf;
+      free(chkin);
+      return(mflops);
+   }
    kp = malloc(sizeof(struct kmm_struct)*p);
    threads = malloc(sizeof(pthread_t)*p);
    attr = malloc(sizeof(pthread_attr_t)*p);
