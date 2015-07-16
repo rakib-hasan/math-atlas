@@ -880,7 +880,6 @@ acnt_mut = $(THRdir)/ATL_SetAtomicCount_mut_mut.o \
 
 IThreadTune :
 	- $(MAKE) ITune_aff
-        - $(MAKE) ITune_cluster
 	$(MAKE) iTune_atomic
 	$(MAKE) MakeThreadSum
 force_build :
@@ -2590,6 +2589,12 @@ res/@(pre)@(rt) : xammsearch
             -i res/@(pre)uAMMFRC.sum 
 	mv $(AMMdir)/UKERNEL/*.h $(INCAdir)/.
 	cd $(AMMdir)/UKERNEL ; $(PMAKE) -f @(pre)Make_amm
+@(pre)install_amm_cluster: xuammsearch
+	./xuammsearch -p $(pre) -b $(NRF) -M 2 a b -T 1.0 -K 1 $(TIDLIST)
+	cp res/@(pre)UMMKCLEAN.sum res/$(pre)UMMKCLEANBYNB.sum
+	make @(pre)install_uamm ID=$(ID)
+	cp res/@(pre)uAMMFRC.sum res/$(pre)CL$(CLID)AMMFRC.sum
+	cp res/@(pre)UMMKCLEAN.sum res/$(pre)CL$(CLID)UMMKCLEAN.sum
 @(pre)install_ammm: @(pre)install_amm
    @ptyp s
       @multidef pp c s
@@ -2717,6 +2722,12 @@ peaktime: peaktim.o
 	$(ATLRUN) $(MMTdir) xpeaktim -# $(nrep)
 peaktim.o : $(mySRCdir)/peaktim.c
 	$(KC) $(KCFLAGS) -c -o peaktim.o $(mySRCdir)/peaktim.c
+tune_cluster: xtune_cluster
+	$(ATLRUN) $(MMTdir) xtune_cluster -p $(pre)
+xtune_cluster: tune_cluster.o
+	$(CLINKER) $(CLINKFLAGS) -o $@ tune_cluster.o
+tune_cluster.o : $(mySRCdir)/tune_cluster.c
+	$(KC) $(KCFLAGS) -c -o tune_cluster.o $(mySRCdir)/tune_cluster.c
 @multidef utp DREAL SREAL DREAL SREAL
 @multidef typ DCPLX SCPLX DREAL SREAL
 @multidef upr d s d s
@@ -3753,6 +3764,9 @@ AMMinstall:
 	cd $(MMTdir) ; $(MAKE) $(pre)install_amm
 	cp $(MMTdir)/res/$(pre)geAMMRES.sum INSTALL_LOG/.
 	cd $(AMMdir) ; make $(pre)lib
+AMMinstall_cluster:
+	cd $(BLDdir)/tune/threads ; $(MAKE) ITune_cluster
+	cd $(MMTdir) ; $(MAKE) tune_cluster pre=$(pre)
 MMinstall :
 	cd $(MMTdir) ; $(MAKE) $(pre)install
 $(MMTdir)/res/atlas_cachedge.h :

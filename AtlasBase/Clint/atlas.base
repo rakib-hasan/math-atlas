@@ -31304,6 +31304,13 @@ void GoToTown(int ARCHDEF, int L1DEF, int TuneLA, int NREG)
 @skip         sprintf(ln, "%s AMM_use pre=%c", fmake, pre);
 @skip         ATL_Cassert(system(ln)==0, "BUILDING BLOCK AMM TUNE", ln2);
          KillAllMMNodes(mmb);
+         #ifdef ATL_NCLUSTER
+            sprintf(ln2, "INSTALL_LOG/%cAMMTUNE_CLUSTER.LOG", pre);
+            sprintf(ln, "%s AMMinstall_cluster pre=%c %s %s\n", 
+                    fmake, pre, redir, ln2);
+            fprintf(stdout, "%s", ln);
+            ATL_Cassert(system(ln)==0, "GEMM TUNE FOR CLUSTER", ln2);
+         #endif
       }
       else  /* complex types use real kernels, but must retune NBs */
       {

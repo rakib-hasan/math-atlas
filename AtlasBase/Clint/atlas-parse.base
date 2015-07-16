@@ -88,6 +88,7 @@ struct MMNode
    char *genstr;                /* system(genstr) will generate gened kernel */
    char *exflags;               /* extra flags to pass test/time call */
    char *moves;                 /* -DMove[A,B,C] to use, NULL default */
+   int *tids;                   /* -tl <nt> <t1> <t2> ... <tn>, NULL default */
    unsigned int flag;
    ATL_mmnode_t *next;
 };
@@ -3362,6 +3363,7 @@ double TimeMMKernel
  */
 {
    char fnam[128], ln[4096];  /* security from 1991 */
+   char tidnam[1024], tidflg[1024];
    const char *LO = FLAG_IS_SET(mmp->flag, MMF_AOUTER) ? "IJK": "JIK";
    const int ku=mmp->ku;
    const int KB = (!FLAG_IS_SET(mmp->flag,MMF_KVEC)) ? kb : ((kb+ku-1)/ku)*ku;
@@ -3389,12 +3391,28 @@ double TimeMMKernel
    #ifndef ATL_SERIAL_INSTALL
       #define RESACT 2   /* want average frm ReadResultsFile for parallel */
 /*
+ *    If tids is specified, build the name and forwarding flags.
+ *    Examples of tidnam and tidflg: T2_4_5 and -tl 2 4 5 .
+ */
+      if (mmp->tids)
+      {
+         int lnam, lflg;
+         j = mmp->tids[0];
+         lnam = sprintf(tidnam, "T%d", j);
+         lflg = sprintf(tidflg, "-tl %d", j);
+         for (i=1; i<=j; i++)
+         {
+            lnam += sprintf(tidnam+lnam, "_%d", mmp->tids[i]);
+            lflg += sprintf(tidflg+lflg, " %d", mmp->tids[i]);
+         }
+      }
+/*
  *    Figure out the name of the output file
  */
       if (FORCETIME)
          strcpy(fnam, "res/tmpout.ktim");
 /*
- *    PREammID_MBxNBxKB_MUxNUxKU_FLAG_v[M,K]VLENbBETA_CFLUSH
+ *    PREammID_MBxNBxKB_MUxNUxKU_FLAG_v[M,K]VLENbBETA_CFLUSH[_tNCPU_CPULIST]
  */
       else
       {
@@ -3403,6 +3421,11 @@ double TimeMMKernel
          else
             ch = (FLAG_IS_SET(mmp->flag,MMF_KVEC)) ? 'K' : 'M';
 
+         if (mmp->tids)
+         sprintf(fnam, "res/%cammm%d_%dx%dx%d_%dx%dx%d_%d_v%c%db%d_%d_%s.ktim",
+                 pre, mmp->ID, mb, nb, KB, mmp->mu, mmp->nu, mmp->ku, mmp->flag,
+                 ch, mmp->vlen, beta, cflush, tidnam);
+         else
          sprintf(fnam, "res/%cammm%d_%dx%dx%d_%dx%dx%d_%d_v%c%db%d_%d.ktim",
                  pre, mmp->ID, mb, nb, KB, mmp->mu, mmp->nu, mmp->ku, mmp->flag,
                  ch, mmp->vlen, beta, cflush);
@@ -3442,6 +3465,8 @@ double TimeMMKernel
             i += sprintf(ln+i, " %cMC=\"%s\"", ch, mmp->comp);
          if (mmp->cflags)
             i += sprintf(ln+i, " %cMCFLAGS=\"%s\"", ch, mmp->cflags);
+         if (mmp->tids)
+            i += sprintf(ln+i, " TIDLIST=\"%s\"", tidflg);
          i += sprintf(ln+i, " outF=\"-f %s\"", fnam);
       }
    #else
