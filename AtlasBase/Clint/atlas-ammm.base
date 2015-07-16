@@ -7953,6 +7953,20 @@ ATL_mmnode_t *SpecializeKClean
 @ROUT uammsearch
 void ComputeKClean(int verb, char pre, ATL_mmnode_t *mmb)
 {
+   ATL_mmnode_t *mkb, *mp, *mmbk=NULL;
+
+   assert(mmb);
+
+   mkb = FindAllUniqueKClean(verb, pre, mmb);
+   if (verb)
+      printf("SPECIALIZING K-CLEANERS FOR SQUARE BLOCKINGS:\n");
+   mmbk = SpecializeKClean(verb, pre, mmb, mkb);
+   if (verb)
+      printf("DONE SPECIALIZING K-CLEANERS FOR SQUARE BLOCKINGS.\n");
+   WriteMMFileWithPath(pre, "res", "UMMKCLEAN.sum", mmbk);
+   KillAllMMNodes(mmbk);
+   if (verb)
+      printf("\nDONE FINDING K-CLEANUP FOR EACH KB.\n");
 }
 @ROUT ammsearch
 void ComputeKClean(int verb, char pre)
@@ -9688,6 +9702,7 @@ ATL_mmnode_t *FindBestKerns
    ATL_mmnode_t *mmb,            /* candidate user-supplied kerns */
    int N,                        /* number of forced block factors */
    int *mbs, int *nbs, int *kbs, /* forced block factors */
+   int *tids,                    /* affinity IDs to run on */
    int C,                        /* constraints */
    float tol                     /* tolerance in getting rid of slow kerns */
 )
@@ -9763,6 +9778,7 @@ ATL_mmnode_t *FindBestKerns
          kuG = 1;
          mpg = GetNewGenNode(pre, kb, 0, muG/VLEN[VECi], nuG, 1, 0);
          mpg->mbB = mb;
+         mpg->tids = tids;
          mfM = TimeMMKernel(verb, 0, mpg, pre, mb, nb, KK, KK, KK, mb, 1, 0,-1);
          printf("      Gen mu=%d, nu=%d, kmaj=%d, mf=%.2f\n", muG, nuG, 0, mfM);
       }
@@ -9803,6 +9819,7 @@ ATL_mmnode_t *FindBestKerns
          {
             mpB =  GetNewGenNode(pre, kb, 0, muG, nuG, kuG, kuG);
             mpg->mbB = mb;
+            mpB->tids = tids;
             mfK = TimeMMKernel(verb, 0, mpB, pre, mb, nb, KK, KK, KK, mb,
                                1, 0,-1);
             printf("      Gen mu=%d, nu=%d, kmaj=%d, mf=%.2f\n", muG, nuG, kuG,
@@ -9861,6 +9878,7 @@ ATL_mmnode_t *FindBestKerns
             printf("      %d-%s: SKIPPED\n", mp->ID, mp->rout);
             continue;
          }
+         mp->tids = tids;
          mf = TimeMMKernel(verb, 0, mp, pre, mb, nb, KB, KB, KB, mb, 1, 0, -1);
          if (KB != kb)
             mf *= (double)kb / (double)KB;
@@ -9947,6 +9965,7 @@ void PrintUsage(char *name, int ierr, char *flag)
    fprintf(stderr, "   -p [s,d]: set precision prefix (d) \n");
    fprintf(stderr, "   -b # nb1 ... nb# : square NBs to force\n");
    fprintf(stderr, "   -B # mb1 nb1 kb1 ... mb# nb# kb#: dims to force\n");
+   fprintf(stderr, "   -tl # t1 t2 ... t#: affinity IDs to use\n");
    fprintf(stderr, 
            "   -M # abc1 ... abc#: which matblks should be cache flushed\n");
    fprintf(stderr, "   -v <verb> : set verbosity (1)\n");
@@ -9968,12 +9987,12 @@ void PrintUsage(char *name, int ierr, char *flag)
 
 ATL_mmnode_t *GetFlags(int nargs, char **args, char *PRE, int *VERB, int *NN,
                        int *C, int **MBS, int **NBS, int **KBS, float *TOL,
-                       int *KCLEAN)
+                       int *KCLEAN, int **TIDS)
 {
    ATL_mmnode_t *mmb=NULL;
    int B0=0, BN, KI;
-   int *mbs=NULL, *nbs=NULL, *kbs=NULL;
-   int i, k, j, N=0, ALL=0, MV;
+   int *mbs=NULL, *nbs=NULL, *kbs=NULL, *tids=NULL;
+   int i, k, j, N=0, ALL=0, MV, tl=0;
    char *cs;
 
 @skip   MOVES = NULL;
@@ -10138,6 +10157,24 @@ ATL_mmnode_t *GetFlags(int nargs, char **args, char *PRE, int *VERB, int *NN,
            kbs[k] = atoi(args[i]);
          }
          break;
+      case 't':
+         assert(args[i][2] == 'l'); /* making sure -tl flag was used */
+         if (tids) free(tids);
+         if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+         tl = atoi(args[i]);
+         assert(tl > 0);
+         tids = malloc((tl+1)*sizeof(int));
+         assert(tids);
+         tids[0] = tl;
+         for (k=1; k <= tl ; k++)
+         {
+           if (++i >= nargs)
+               PrintUsage(args[0], i-1, NULL);
+            tids[k] = atoi(args[i]);
+         }
+         *TIDS = tids;
+         break;
       case 'b':
          if (nbs)
          {
@@ -10283,14 +10320,14 @@ ATL_mmnode_t *FindBestSquareKern(char pre, int verb, ATL_mmnode_t *mmb)
 
 int main(int nargs, char **args)
 {
-   int *nbs, *mbs, *kbs, verb, N, C=0, KCLEAN;
+   int *nbs, *mbs, *kbs, verb, N, C=0, KCLEAN, *tids=NULL;
    float tol;
    char pre;
    ATL_mmnode_t *mmb, *mp, *mmB;
    double mfB;
 
    mmb = GetFlags(nargs, args, &pre, &verb, &N, &C, &mbs, &nbs, &kbs, &tol,
-                  &KCLEAN);
+                  &KCLEAN, &tids);
 /*
  * If -S is thrown, we take kernels from prior search, and just retune with
  * requirement that the kernels be square
@@ -10319,7 +10356,7 @@ int main(int nargs, char **args)
       mmb = GetWorkingUserCases(verb, upr);  /* get all working kernels */
       mmb = ApplyConstraints(mmb, C);        /* reject disallowed kerns */
       ApplyMoves2Flags(mmb, IMVS);           /* indicate A/B/C movememnt */
-      mmb = FindBestKerns(pre, verb, mmb, N, mbs, nbs, kbs, C, tol);
+      mmb = FindBestKerns(pre, verb, mmb, N, mbs, nbs, kbs, tids, C, tol);
    }
    if (KCLEAN)
       ComputeKClean(verb, pre, mmb);
@@ -10343,6 +10380,7 @@ int main(int nargs, char **args)
    free(mbs);
    free(nbs);
    free(kbs);
+   if (tids) free(tids);
 @skip   if (MOVES)
 @skip      free(MOVES);
    return(0);
@@ -15000,6 +15038,193 @@ int Mjoin(PATL,ammmNMK)
    }
    free(vp);
    return(0);
+}
+@ROUT tune_cluster
+#include "atlas_misc.h"
+#ifdef ATL_NCLUSTER
+   #include "atlas_cluster.h"
+#endif
+#include "atlas_sys.h"
+
+void PrintUsage(char *name, int ierr, char *flag)
+{
+   if (ierr > 0)
+      fprintf(stderr, "Bad argument #%d: '%s'\n", ierr,
+              flag?flag:"OUT-OF_ARGUMENTS");
+   else if (ierr < 0)
+      fprintf(stderr, "ERROR: %s\n", flag);
+   fprintf(stderr, "USAGE: %s [flags:\n", name);
+   fprintf(stderr, "   -p <precision>: precision to tune\n");
+   exit(ierr ? ierr : -1);
+}
+char GetFlags(int nargs, char **args)
+{
+   int i;
+   char pre = 'd';
+
+   for (i=1; i < nargs; i++)
+   {
+      if (args[i][0] != '-')
+         PrintUsage(args[0], i, args[i]);
+      switch(args[i][1])
+      {
+      case 'p':
+         pre = args[++i][0];
+         break;
+      default:
+         PrintUsage(args[0], i, args[i]);
+      }
+   }
+   return(pre);
+}
+
+int main(int nargs, char **args)
+{
+   int ierr = 0;
+   char pre;
+   double total_perf, perf[ATL_NCLUSTER];
+   pre = GetFlags(nargs, args);
+   #ifdef ATL_NCLUSTER
+   {
+      #define CL_AMM_ID_START ATL_CL_AMM_START
+      FILE *fpout;
+      char tids[2048];
+      char ln[2048];
+      int ti, tj, lni;
+      for (tj=0; tj<ATL_NCLUSTER; tj++)
+      {
+         lni = sprintf(tids, " -tl %d", ATL_CL_ncpus[tj]);
+         for (ti=0; ti<ATL_CL_ncpus[tj]; ti++) 
+            lni += sprintf(tids+lni, " %d", ATL_CL_affIds[tj][ti]);
+         sprintf(ln, "make %cinstall_amm_cluster pre=%c CLID=%d ID=%d "
+                     "TIDLIST=\"%s\" \n", 
+                     pre, pre, tj, CL_AMM_ID_START+tj, tids);
+         fprintf(stdout, "%s", ln);
+         if (ierr=system(ln))
+         {
+            fprintf(stderr, 
+               "ERROR at tuning for CLUSTER %d. Aborting ...\n", tj);
+            return(ierr);
+         }
+      }
+      /* save some combined info in atlas_<pre>uamm_cluster.h */
+      total_perf = 0;
+      for (tj=0; tj<ATL_NCLUSTER; tj++)
+      {
+         char *res;
+         sprintf(ln, "cat ../../../include/atlas_%cu%damm_perf.h | "
+                     "grep -m 1 ATL_UAMM_MAXMFLOP | cut -d' ' -s -f 3", 
+                     pre, CL_AMM_ID_START+tj);
+         res = atlsys_1L(NULL, ln, 0, 0);
+         if (res)
+         {
+            perf[tj] = atof(res);
+            total_perf += perf[tj]*ATL_CL_ncpus[tj];
+            free(res);
+         }
+      }
+      sprintf(ln, "../../../include/atlas_%cuamm_cluster.h", pre);
+      fpout = fopen(ln, "w");
+      assert(fpout);
+      fprintf(fpout, "/* Generated by %s */\n", __FILE__);
+      fprintf(fpout, "#ifndef ATLAS_%cUAMM_CLUSTER_H\n", pre-0x20);
+
+      fprintf(fpout, "   #define ATLAS_%cUAMM_CLUSTER_H\n\n", pre-0x20);
+      fprintf(fpout, "   #define ATLAS_TOTAL_PERF %e /* (%.2lf) */\n\n", 
+                                          total_perf, total_perf);
+
+      fprintf(fpout, "   /* Performance per core for each cluster */\n");
+      fprintf(fpout, "   static double ATL_CL_PERF[%d] = \n", ATL_NCLUSTER);
+      fprintf(fpout, "   {\n");
+      fprintf(fpout, "      %12e", perf[0]);
+      for (tj=1; tj<ATL_NCLUSTER; tj++)
+      {
+         fprintf(fpout, ",   /* cluster %d (%9.2lf) */\n      %12e", 
+                                       tj-1, perf[tj-1], perf[tj]);
+      }
+      fprintf(fpout, "    /* cluster %d (%9.2lf) */\n   };\n\n", 
+                                 tj-1, perf[tj-1]);
+
+      fprintf(fpout, "   /* Performance ratio = PERF_PER_CORE * " 
+                     "CORE_PER_CLUSTER / TOTAL_PERF */\n");
+      fprintf(fpout, "   static double ATL_CL_LD_RATIO[%d] = \n", ATL_NCLUSTER);
+      fprintf(fpout, "   {\n");
+      fprintf(fpout, "      %lf", perf[0]*ATL_CL_ncpus[0]/total_perf);
+      for (tj=1; tj<ATL_NCLUSTER; tj++)
+      {
+         fprintf(fpout, ",   /* cluster %d */\n      %lf", 
+                              tj-1, perf[tj]*ATL_CL_ncpus[tj]/total_perf);
+      }
+      fprintf(fpout, "    /* cluster %d */\n   };\n\n", tj-1);
+
+      lni = sprintf(ln, 
+         "      (enum ATLAS_TRANS, enum ATLAS_TRANS, ATL_CINT, ATL_CINT, \n");
+      lni += sprintf(ln+lni, 
+         "      ATL_CINT, const SCALAR, const TYPE*, ATL_CINT, \n");
+      lni += sprintf(ln+lni, 
+         "      const TYPE*, ATL_CINT, const SCALAR, TYPE*, ATL_CINT); \n");
+
+      fprintf(fpout, "   typedef int (*tammm_CL_t)\n");
+      fprintf(fpout, "%s", ln);
+
+      for (tj=0; tj<ATL_NCLUSTER; tj++)
+      {
+         fprintf(fpout, "   int ATL_%ctammm_GC%d\n", pre, tj);
+         fprintf(fpout, "%s", ln);
+      }
+
+      fprintf(fpout, "   static const tammm_CL_t ATL_CL_tammm_G[%d] = \n", 
+                     ATL_NCLUSTER);
+      fprintf(fpout, "   {\n");
+      fprintf(fpout, "      ATL_%ctammm_GC%d", pre, 0);
+      for (tj=1; tj<ATL_NCLUSTER; tj++)
+      {
+         fprintf(fpout, ",   /* cluster %d */\n      ATL_%ctammm_GC%d", 
+                              tj-1, pre, tj);
+      }
+      fprintf(fpout, "    /* cluster %d */\n   };\n\n", tj-1);
+
+      lni = sprintf(ln, 
+         "      (amminfo_t*, const unsigned int, "
+         "enum ATLAS_TRANS, enum ATLAS_TRANS, \n");
+      lni += sprintf(ln+lni, 
+         "      ATL_CSZT, ATL_CSZT, ATL_CSZT, const SCALAR, const SCALAR); \n");
+
+      fprintf(fpout, "   typedef int (*GetAmmmInfo_CL_t)\n");
+      fprintf(fpout, "%s", ln);
+
+      for (tj=0; tj<ATL_NCLUSTER; tj++)
+      {
+         fprintf(fpout, "   int ATL_%ctGetAmmmInfoC%d\n", pre, tj);
+         fprintf(fpout, "%s", ln);
+      }
+
+      fprintf(fpout, 
+         "   static const GetAmmmInfo_CL_t ATL_CL_tGetAmmmInfo[%d] = \n", 
+                     ATL_NCLUSTER);
+      fprintf(fpout, "   {\n");
+      fprintf(fpout, "      ATL_%ctGetAmmmInfoC%d", pre, 0);
+      for (tj=1; tj<ATL_NCLUSTER; tj++)
+      {
+         fprintf(fpout, ",   /* cluster %d */\n      ATL_%ctGetAmmmInfoC%d", 
+                              tj-1, pre, tj);
+      }
+      fprintf(fpout, "    /* cluster %d */\n   };\n\n", tj-1);
+
+      fprintf(fpout, "   typedef struct\n");
+      fprintf(fpout, "   {\n");
+      fprintf(fpout, "      tammm_CL_t tammm_G; \n");
+      fprintf(fpout, "      enum ATLAS_TRANS TA, TB; \n");
+      fprintf(fpout, "      SCALAR alpha, beta; \n");
+      fprintf(fpout, "      TYPE *A, *B, *C; \n");
+      fprintf(fpout, "      int lda, ldb, ldc; \n");
+      fprintf(fpout, "   } ATL_tammmC_t;\n\n");
+
+      fprintf(fpout, "\n#endif /* end multiple inclusion guard */");
+      fclose(fpout);
+   }
+   #endif
+   return(ierr);
 }
 @ROUT peaktim
 #include "atlas_misc.h"

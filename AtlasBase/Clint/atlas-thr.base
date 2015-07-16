@@ -12730,7 +12730,7 @@ int Mjoin(PATL,ttrsm_amm)
       return(ttrsm_ammL(uplo, TA, diag, M, N, alpha, A, lda, B, ldb));
    return(1);
 }
-@ROUT ATL_tgemm_amm ATL_tammm_tNK ATL_tammm_G
+@ROUT ATL_tgemm_amm ATL_tammm_tNK ATL_tammm_G ATL_tammm_C
 #include "atlas_misc.h"
 #define ATL_ESTNCTR 1
 #include "atlas_tlvl3.h"
@@ -12943,6 +12943,81 @@ int Mjoin(PATL,tammm_tNK)
 
    free(vp);
    return(0);
+}
+@ROUT ATL_tammm_C
+#ifdef ATL_NCLUSTER
+   #include "atlas_cluster.h"
+   #include Mstr(Mjoin(ATLAS_PRE, uamm_cluster.h))
+#endif
+
+void *DoWorkForCluster(void *vp)
+{
+   ATL_tammmC_t *pd = vp;
+   pd->tammm_G(pd->TA, pd->TB, pd->M, pd->N, pd->K, pd->alpha, pd->A, pd->lda, 
+               pd->B, pd->ldb, pd->beta, pd->C, pd->ldc);
+}
+
+int Mjoin(PATL,tammm_C)
+(
+   enum ATLAS_TRANS TA,
+   enum ATLAS_TRANS TB,
+   ATL_CINT M,
+   ATL_CINT N,
+   ATL_CINT K,
+   const SCALAR alpha,
+   const TYPE *A,
+   ATL_CINT lda,
+   const TYPE *B,
+   ATL_CINT ldb,
+   const SCALAR beta,
+   TYPE *C,
+   ATL_CINT ldc
+)
+{
+   int ncblks, nmblks, nnblks;
+   size_t sz;
+   amminfo_t mminfo;
+   int i, part, rem;
+   ATL_thread_t workers[ATL_NCLUSTER];
+   ATL_tammmC_t td[ATL_NCLUSTER];
+
+   nmblks = M / ATL_AMM_66MB;
+   nnblks = N / ATL_AMM_66NB;
+   ncblks = sz = ((size_t)nmblks) * nnblks;
+   if (ncblks != sz)   /* too many blocks to safely count */
+      return(1);       /* so tell caller to recur or call something else */
+/*
+ * Quick exit for problems too small to thread
+ */
+   if (ncblks < 8)
+   {
+      Mjoin(PATL,ammm)(TA, TB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
+      return(0);
+   }
+   /* create one thread for each cluster and call the correct tammm_G */
+   for (i=0; i<ATL_NCLUSTER; i++)
+   {
+      td[i].tammm_G = ATL_CL_tammm_G[i];
+      td[i].TA = TA;
+      td[i].TB = TB;
+      td[i].alpha = alpha;
+      td[i].beta = beta;
+      td[i].lda = lda;
+      td[i].ldb = ldb;
+      td[i].ldc = ldc;
+      if (N >= M) /* N parition */
+      {
+         td[i].A = A;
+      }
+      else /* M partition */
+      {
+         td[i].B = B;
+      }
+      ATL_thread_start(&workers[i], ATL_CL_affIds[i][0], 1, DoWorkForCluster, 
+                       td+i);
+   }
+   for (i=0; i<ATL_NCLUSTER; i++)
+      ATL_thread_join(&workers[i]);
 }
 @ROUT ATL_tammm_G
 static void DoCpy
@@ -13808,7 +13883,13 @@ int Mjoin(PATL,tammm)
                                    beta, C, ldc));
    else if (M > ATL_AMM_MAXMB && K >= 16 && N > ATL_AMM_MAXNB)
       return(Mjoin(PATL,ammm_REC)(TA, TB, M, N, K, alpha, A, lda, B, ldb,
-                                  beta, C, ldc, Mjoin(PATL,tammm_G)));
+                                  beta, C, ldc, 
+                                  #ifdef ATL_NCLUSTER
+                                    Mjoin(PATL,tammm_G)
+                                  #else
+                                    Mjoin(PATL, tammm_C)
+                                  #endif
+                                  ));
    return(1);
 }
 @ROUT ATL_tsyrk_amm
