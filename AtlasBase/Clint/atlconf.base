@@ -3616,6 +3616,9 @@ void PrintResults(char *outfile, int ncpu, int *IDs, int ncluster,
    fprintf(fpout, "#ifndef ATLAS_CLUSTER_H\n");
 
    fprintf(fpout, "   #define ATLAS_CLUSTER_H\n\n");
+
+   fprintf(fpout, "   #include \"atlas_misc.h\"\n\n");
+
    fprintf(fpout, "   #define ATL_CLUSTERS %d\n", ncluster);
    fprintf(fpout, "   #define ATL_CL_AMM_START 100\n\n"); /* for now */
 
@@ -3678,6 +3681,19 @@ void PrintResults(char *outfile, int ncpu, int *IDs, int ncluster,
       fprintf(fpout, ",   /* CPU %4d */\n      %9d", i-1, freqs[cids[i]]);
    }
    fprintf(fpout, "    /* CPU %4d */\n   };\n\n", i-1);
+
+   fprintf(fpout, "#ifdef TYPE\n");
+   fprintf(fpout, "   typedef struct\n");
+   fprintf(fpout, "   {\n");
+   fprintf(fpout, "      void* tammm_G; \n");
+   fprintf(fpout, "      enum ATLAS_TRANS TA, TB; \n");
+   fprintf(fpout, "      SCALAR alpha, beta; \n");
+   fprintf(fpout, "      int M, N, K; \n");
+   fprintf(fpout, "      const TYPE *A, *B; \n");
+   fprintf(fpout, "      TYPE *C; \n");
+   fprintf(fpout, "      int lda, ldb, ldc; \n");
+   fprintf(fpout, "   } ATL_tammmC_t;\n\n");
+   fprintf(fpout, "#endif /* guard to be used in tune_cluster */\n");
 
    fprintf(fpout, "\n#endif /* end multiple inclusion guard */");
    if (fpout != stderr && fpout != stdout)

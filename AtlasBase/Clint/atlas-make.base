@@ -2580,9 +2580,20 @@ res/@(pre)@(rt) : xammsearch
 @(pre)install_amm_cluster: xuammsearch
 	./xuammsearch -p $(pre) -b $(NRF) -M 2 a b -T 1.0 -K 1 $(TIDLIST)
 	cp res/@(pre)UMMKCLEAN.sum res/$(pre)UMMKCLEANBYNB.sum
-	make @(pre)install_uamm ID=$(ID)
+	make @(pre)install_uamm ID=$(ID) UAMMlib=$(ATLASlib)
 	cp res/@(pre)uAMMFRC.sum res/$(pre)CL$(CLID)AMMFRC.sum
 	cp res/@(pre)UMMKCLEAN.sum res/$(pre)CL$(CLID)UMMKCLEAN.sum
+@(pre)install_l3thr_cluster: 
+	$(MAKE) -f $(BLDdir)/src/threads/blas/level3/Makefile \
+	    ATL_@(pre)tammm_GC$(CLID).o CLID=$(CLID) UAMM_ID=$(UAMM_ID)
+	$(ARCHIVER) $(ARFLAGS) $(ATLASlib) ATL_@(pre)tammm_GC$(CLID).o
+	$(RANLIB) $(ATLASlib)
+	touch $(BLDdir)/src/threads/blas/level3/$(pre)lib.grd
+	$(MAKE) -f $(AMMdir)/Makefile \
+	    ATL_@(pre)GetAmmmInfoC$(CLID).o CLID=$(CLID) UAMM_ID=$(UAMM_ID)
+	$(ARCHIVER) $(ARFLAGS) $(ATLASlib) ATL_@(pre)GetAmmmInfoC$(CLID).o
+	$(RANLIB) $(ATLASlib)
+	touch $(AMMdir)/$(pre)lib.grd
 @(pre)install_ammm: @(pre)install_amm
    @ptyp s
       @multidef pp c s
@@ -2711,7 +2722,7 @@ peaktime: peaktim.o
 peaktim.o : $(mySRCdir)/peaktim.c
 	$(KC) $(KCFLAGS) -c -o peaktim.o $(mySRCdir)/peaktim.c
 tune_cluster: xtune_cluster
-	$(ATLRUN) $(MMTdir) xtune_cluster -p $(pre)
+	$(ATLRUN) $(MMTdir) xtune_cluster -p $(pre) -i $(INCAdir)
 xtune_cluster: tune_cluster.o
 	$(CLINKER) $(CLINKFLAGS) -o $@ tune_cluster.o
 tune_cluster.o : $(mySRCdir)/tune_cluster.c
@@ -7675,6 +7686,7 @@ ATL_Xt@(rt2).o : $(deps) $(mySRCdir)/ATL_Xt@(rt2).c
       ATL_@(pre)tammm_tNK.o
       ATL_@(pre)tammm_tMN.o
       ATL_@(pre)tammm_G.o
+      ATL_@(pre)tammm_C.o
    @ptyp c z 
       @whiledef crt
          ATL_@(pre)t@(crt).o
@@ -7697,10 +7709,14 @@ ATL_Xt@(rt2).o : $(deps) $(mySRCdir)/ATL_Xt@(rt2).c
 	rm -f $(@(pre)obj) @(pre)lib.grd
 
 @PTYP D S
-@whiledef ar trsm_amm syrk_amm gemm_amm ammm_G ammm_tNK ammm_tMN
+@whiledef ar trsm_amm syrk_amm gemm_amm ammm_G ammm_tNK ammm_tMN ammm_C
 ATL_@(pre)t@(ar).o : $(deps) $(INCSdir)/atlas_ttypes.h $(mySRCdir)/ATL_t@(ar).c
 	$(KC) $(KCFLAGS) -D@(typ) -o $@ -c $(mySRCdir)/ATL_t@(ar).c
 @endwhile
+ATL_@(pre)tammm_GC$(CLID).o : $(deps) $(INCSdir)/atlas_ttypes.h \
+            $(mySRCdir)/ATL_tammm_G.c
+	$(KC) $(KCFLAGS) -D@(typ) -DCLID=$(CLID) -DUAMM_ID=$(UAMM_ID) \
+	 -o $@ -c $(mySRCdir)/ATL_tammm_G.c
 @PTYP C Z
 @whiledef cr2
    @define crt @@(cr2)@
@@ -7827,6 +7843,11 @@ ATL_@(pre)@(rt).o : $(@(pre)INCdep) $(mySRCdir)/ATL_@(rt).c
    @whiledef rt GetAmmmInfoSQ
 ATL_@(pre)@(rt).o : $(@(pre)INCSQdep) $(mySRCdir)/ATL_@(rt).c
 	$(@(UPR)KC) -D@(typ)=1 -o $@ -c $(@(pre)KCFLAGS) $(mySRCdir)/ATL_@(rt).c
+   @endwhile
+   @whiledef rt GetAmmmInfo
+ATL_@(pre)@(rt)C$(CLID).o : $(@(pre)INCSQdep) $(mySRCdir)/ATL_@(rt).c
+	$(@(UPR)KC) -D@(typ)=1 -o $@ $(@(pre)KCFLAGS) \
+	 -DCLID=$(CLID) -DUAMM_ID=$(UAMM_ID) -c $(mySRCdir)/ATL_@(rt).c
    @endwhile
    @killkeys ptyp
    @undef UPR

@@ -1298,7 +1298,7 @@ int Mjoin(PATL,ammm_REC)
     int (*amm)(enum ATLAS_TRANS,enum ATLAS_TRANS, ATL_CINT, ATL_CINT, ATL_CINT,
                const SCALAR, const TYPE*, ATL_CINT,  const TYPE*, ATL_CINT,
                const SCALAR, TYPE*, ATL_CINT));
-@whiledef rt tammm_G tammm_tNK tammm_tMN
+@whiledef rt tammm_C tammm_G tammm_tNK tammm_tMN
 int Mjoin(PATL,@(rt))
    (const enum ATLAS_TRANS TA, const enum ATLAS_TRANS TB, 
     ATL_CINT M, ATL_CINT N, ATL_CINT K, const SCALAR alpha,
@@ -12953,8 +12953,9 @@ int Mjoin(PATL,tammm_tNK)
 void *DoWorkForCluster(void *vp)
 {
    ATL_tammmC_t *pd = vp;
-   pd->tammm_G(pd->TA, pd->TB, pd->M, pd->N, pd->K, pd->alpha, pd->A, pd->lda, 
-               pd->B, pd->ldb, pd->beta, pd->C, pd->ldc);
+   tammm_CL_t ammmG = pd->tammm_G;
+   ammmG(pd->TA, pd->TB, pd->M, pd->N, pd->K, pd->alpha, pd->A, pd->lda, 
+         pd->B, pd->ldb, pd->beta, pd->C, pd->ldc);
 }
 
 int Mjoin(PATL,tammm_C)
@@ -12980,6 +12981,7 @@ int Mjoin(PATL,tammm_C)
    int i, part, rem;
    ATL_thread_t workers[ATL_NCLUSTER];
    ATL_tammmC_t td[ATL_NCLUSTER];
+   int maxB, mine, rest = Mmax(M, N);
 
    nmblks = M / ATL_AMM_66MB;
    nnblks = N / ATL_AMM_66NB;
@@ -13007,11 +13009,31 @@ int Mjoin(PATL,tammm_C)
       td[i].ldc = ldc;
       if (N >= M) /* N parition */
       {
+         maxB = ATL_CL_MAXNBs[i];                  /* find maxNB */
+         mine = (int)(N * ATL_CL_LD_RATIO[i]);     /* find my part */
+         mine = ((mine + maxB - 1) / maxB) * maxB; /* round it to full blk */
+         mine = Mmin(mine, rest);
+         td[i].M = M;
+         td[i].N = mine;
+         td[i].K = K;
          td[i].A = A;
+         td[i].B = B + (N-rest)*((size_t)ldb);
+         td[i].C = C + (N-rest)*((size_t)ldc);
+         rest -= mine;
       }
       else /* M partition */
       {
+         maxB = ATL_CL_MAXMBs[i];                  /* find maxMB */
+         mine = (int)(M * ATL_CL_LD_RATIO[i]);     /* find my part */
+         mine = ((mine + maxB - 1) / maxB) * maxB; /* round it to full blk */
+         mine = Mmin(mine, rest);
+         td[i].M = mine;
+         td[i].N = N;
+         td[i].K = K;
+         td[i].A = A + (M-rest);
          td[i].B = B;
+         td[i].C = C + (M-rest);
+         rest -= mine;
       }
       ATL_thread_start(&workers[i], ATL_CL_affIds[i][0], 1, DoWorkForCluster, 
                        td+i);
@@ -13430,6 +13452,7 @@ static void DoNoCopyBlksG(ATL_tgemm_ammG_t *pd, int rank, int vrank, TYPE *wC)
    }
 }
 
+#if !defined(ATL_NCLUSTER) || !defined(CLID)
 void Mjoin(PATL,DoWork_ammG)(void *vpp, int rank, int vrank)
 {
    ATL_tpool_t *pp=vpp;
@@ -13439,13 +13462,65 @@ void Mjoin(PATL,DoWork_ammG)(void *vpp, int rank, int vrank)
       DoCopyBlksG(pd, rank, vrank, myC);
    DoNoCopyBlksG(pd, rank, vrank, myC);
 }
+#endif
+
+#if defined(ATL_NCLUSTER) && defined(CLID)
+   #include "atlas_cluster.h"
+   #include Mstr(Mjoin(ATLAS_PRE, uamm_cluster.h))
+   #ifndef UAMM_ID   
+      #error "UAMM_ID must be defined."                     
+   #endif
+   #define MM_PRE Mjoin(Mjoin(ATLAS_PRE, Mjoin(u,UAMM_ID)), amm)
+   #include Mstr(Mjoin(MM_PRE,_sum.h))
+   #define VAR_PRE ATL_UAMM
+
+typedef struct
+{
+   void *pd;
+   int rank;
+} my_par_t;
+
+static void *my_par(void *td)
+{
+   my_par_t *pt = td;
+   const int rank = pt->rank;
+   const int vrank = pt->rank;
+   ATL_tgemm_ammG_t *pd = pt->pd;
+   TYPE *myC = pd->wC + vrank*pd->blkszC;
+   if (!pd->NOCPWORK)
+      DoCopyBlksG(pd, rank, vrank, myC);
+   DoNoCopyBlksG(pd, rank, vrank, myC);
+}
+
+static void my_parallel(int P, int *affIds, ATL_tgemm_ammG_t *pd)
+{
+   ATL_thread_t workers[ATL_NTHREADS];
+   my_par_t td[ATL_NTHREADS];
+   int i;
+   for (i=0; i<P; i++)
+   {
+      td[i].rank = i;
+      td[i].pd = pd;
+      ATL_thread_start(&workers[i], affIds[i], 1, my_par, td+i);
+   }
+   for (i=0; i<P; i++)
+      ATL_thread_join(&workers[i]);
+}
+#else
+   #define VAR_PRE ATL_AMM
+#endif
+
 /*
  * This one can be used anytime C is large enough to provide parallelism.
  * It tries to copy all of A & B up front, so recursion may be needed to
  * use it for large matrices.
  * RETURNS: 0 if it did the operation, non-zero if it did not
  */
+#if defined(ATL_NCLUSTER) && defined(CLID)
+   int Mjoin(Mjoin(PATL,tammm_GC), CLID)
+#else
 int Mjoin(PATL,tammm_G)
+#endif
 (
    enum ATLAS_TRANS TA,
    enum ATLAS_TRANS TB,
@@ -13473,8 +13548,8 @@ int Mjoin(PATL,tammm_G)
                          p4 = nthr>>2, p4_2 = nthr+nthr, p4_3 = p4_2+p4;
    #endif
 
-   nmblks = M / ATL_AMM_66MB;
-   nnblks = N / ATL_AMM_66NB;
+   nmblks = M / Mjoin(VAR_PRE, _66MB);
+   nnblks = N / Mjoin(VAR_PRE, _66NB);
    ncblks = sz = ((size_t)nmblks) * nnblks;
    if (ncblks != sz)   /* too many blocks to safely count */
       return(1);       /* so tell caller to recur or call something else */
@@ -13486,8 +13561,14 @@ int Mjoin(PATL,tammm_G)
       Mjoin(PATL,ammm)(TA, TB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
       return(0);
    }
-   mb = Mjoin(PATL,tGetAmmmInfo)(&mminfo, Mmin(ncblks, ATL_NTHREADS), TA,
-                                 TB, M, N, K, alpha, beta);
+   #if defined(ATL_NCLUSTER) && defined(CLID)
+      mb = Mjoin(Mjoin(PATL,tGetAmmmInfoC),CLID)
+            (&mminfo, Mmin(ncblks, ATL_CL_ncpus[CLID]), TA, TB, 
+            M, N, K, alpha, beta);
+   #else
+      mb = Mjoin(PATL,tGetAmmmInfo)(&mminfo, Mmin(ncblks, ATL_NTHREADS), TA,
+                                    TB, M, N, K, alpha, beta);
+   #endif
    pd.alpA = pd.alpB = pd.alpC = ATL_rone;
    if (!mb)
       pd.alpA = alpha;
@@ -13514,7 +13595,11 @@ int Mjoin(PATL,tammm_G)
    pd.nCblks = sz = ((size_t)nmblks)*nnblks;
    if (pd.nCblks != sz)
       return(1);
-   P = Mmin(ATL_NTHREADS,pd.nCblks);
+   #if defined(ATL_NCLUSTER) && defined(CLID)
+      P = Mmin(ATL_CL_ncpus[CLID],pd.nCblks);
+   #else
+      P = Mmin(ATL_NTHREADS,pd.nCblks);
+   #endif
    pd.nMNblks = nMNblks = Mmax(nmblks, nnblks);
    sz = nmblks * mb;
    pd.mbf = (sz == M) ? mb : M+mb-sz;
@@ -13534,11 +13619,11 @@ int Mjoin(PATL,tammm_G)
    }
    else
    {
-      #if ATL_AMM_MAXKMAJ > 1
-         if (ATL_AMMFLG_KMAJOR(mminfo.flag))
+      #if Mjoin(VAR_PRE,_MAXKMAJ) > 1
+         if (Mjoin(VAR_PRE,FLG_KMAJOR)(mminfo.flag))
          {
             KB0 = ((kb0+ku-1)/ku)*ku;
-            if (ATL_AMMFLG_KRUNTIME(mminfo.flag))
+            if (Mjoin(VAR_PRE,FLG_KRUNTIME)(mminfo.flag))
             {
                pd.ammK_b0 = mminfo.amm_b0;
                pd.ammK_b1 = mminfo.amm_b1;
@@ -13552,7 +13637,7 @@ int Mjoin(PATL,tammm_G)
          else
       #endif
       {
-         if (ATL_AMMFLG_KRUNTIME(mminfo.flag) && kb0 == (kb0/ku)*ku &&
+         if (Mjoin(VAR_PRE,FLG_KRUNTIME)(mminfo.flag) && kb0 == (kb0/ku)*ku &&
              kb0 > mminfo.kbmin)
          {
             pd.ammK_b0 = mminfo.amm_b0;
@@ -13672,7 +13757,11 @@ int Mjoin(PATL,tammm_G)
          ATL_FreeThreadPool(pp);
    }
    #else
-      ATL_goParallel(P, Mjoin(PATL,DoWork_ammG), NULL, &pd, NULL);
+      #if defined(ATL_NCLUSTER) && defined(CLID)
+         my_parallel(P, ATL_CL_affIds[CLID], &pd);
+      #else
+         ATL_goParallel(P, Mjoin(PATL,DoWork_ammG), NULL, &pd, NULL);
+      #endif
    #endif
 /*
  * Free allocated structures and return;
@@ -13885,9 +13974,9 @@ int Mjoin(PATL,tammm)
       return(Mjoin(PATL,ammm_REC)(TA, TB, M, N, K, alpha, A, lda, B, ldb,
                                   beta, C, ldc, 
                                   #ifdef ATL_NCLUSTER
-                                    Mjoin(PATL,tammm_G)
+                                    Mjoin(PATL,tammm_C)
                                   #else
-                                    Mjoin(PATL, tammm_C)
+                                    Mjoin(PATL, tammm_G)
                                   #endif
                                   ));
    return(1);
