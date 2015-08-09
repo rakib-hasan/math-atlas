@@ -144,13 +144,13 @@ ID=45 MU=8 NU=1 KU=2 AUTH="R. Clint Whaley" ROUT='ATL_kmmm8x1x256_L1pf.S' \
 ID=46 MU=8 NU=6 KU=2 AUTH="R. Clint Whaley" ROUT='ATL_damm8x6x2_fma3.S' \
      SSE=3 ASM=GAS_x8664 KRUNTIME=1 LDCTOP=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp -mavx -mfma'
-ID=47 MU=12 NU=4 KU=6 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x6_aarch64-A57.S' \
+ID=48 MU=12 NU=4 KU=6 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x6_aarch64-A57.S' \
      KBMIN=6 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
-ID=48 MU=12 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A53.S' \
+ID=49 MU=12 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A53.S' \
      KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
-ID=49 MU=12 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A57.S' \
+ID=50 MU=12 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A57.S' \
      KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
 @ROUT samcases.idx
@@ -220,13 +220,13 @@ ID=44 MU=4 NU=2 KU=4 AUTH="Whaley & Voronenko" ROUT='ATL_kmmm4x2x256_sse3.S' \
 ID=45 MU=8 NU=1 KU=4 AUTH="R. Clint Whaley" ROUT='ATL_kmmm8x1x256_L1pf.S' \
      KMAJ=4 SSE=3 KBMAX=256 ASM=GAS_x8664 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp -msse3'
-ID=47 MU=24 NU=4 KU=6 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x6_aarch64-A57.S' \
+ID=48 MU=24 NU=4 KU=6 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x6_aarch64-A57.S' \
      KBMIN=6 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
-ID=48 MU=24 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A53.S' \
+ID=49 MU=24 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A53.S' \
      KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
-ID=49 MU=24 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A57.S' \
+ID=50 MU=24 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A57.S' \
      KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
 @ROUT samcases.idx
