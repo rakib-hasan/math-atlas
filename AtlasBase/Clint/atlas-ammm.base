@@ -158,6 +158,9 @@ ID=47 MU=12 NU=4 KU=6 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x6_aarch64-A57.S' \
 ID=48 MU=12 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A53.S' \
      KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
+ID=49 MU=12 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A57.S' \
+     KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
+     COMP='gcc' CFLAGS='-x assembler-with-cpp'
 @ROUT samcases.idx
 @ROUT samcases.idx
 ID=1 MU=16 NU=4 VLEN=4 KU=1 AUTH="R. Clint Whaley" ROUT='ATL_samm16x4x1_av.c' \
@@ -234,6 +237,9 @@ ID=47 MU=24 NU=4 KU=6 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x6_aarch64-A57.S' \
      KBMIN=6 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
 ID=48 MU=24 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A53.S' \
+     KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
+     COMP='gcc' CFLAGS='-x assembler-with-cpp'
+ID=49 MU=24 NU=4 KU=1 AUTH="Rakib Hasan" ROUT='ATL_damm12x4x1_aarch64-A57.S' \
      KBMIN=1 ASM=GAS_ARM64 KRUNTIME=1 \
      COMP='gcc' CFLAGS='-x assembler-with-cpp'
 @ROUT samcases.idx

@@ -207,6 +207,24 @@ void ATL_USERMM(SZT nmu, SZT nnu, SZT K, CTYPE *pA, CTYPE *pB, TYPE *pC,
    op rC52, rA5, rB2 ; \
    op rC53, rA5, rB3
 
+#ifndef BETA0
+   #define LD_C(pC, off, qC) ldr qC, [pC, #(off)]
+   #ifdef BETA1
+      #define OP_C(rC, rT) fadd rC, rC, rT
+   #else
+      #define OP_C(rC, rT) fsub rC, rC, rT
+   #endif
+#else
+   #define LD_C(pC, off, qC)
+   #define OP_C(rC, rT)
+#endif
+
+
+#define HandleC(pC, off, rC, qC, rT, qT) \
+   LD_C(pC, off, qT) ; \
+   OP_C(rC, rT) ; \
+   str qC, [pC, #(off)]
+
 .text
 .align 5
 .global ATL_asmdecor(ATL_USERMM)
@@ -241,138 +259,48 @@ ATL_asmdecor(ATL_USERMM):
    .align 5
    MLOOP:
       NLOOP:
-         #ifndef BETA0
-            ldr qC00, [pC, #( 0*16)]
-            ldr qC10, [pC, #( 1*16)]
-            ldr qC20, [pC, #( 2*16)]
-            ldr qC30, [pC, #( 3*16)]
-            ldr qC40, [pC, #( 4*16)]
-            ldr qC50, [pC, #( 5*16)]
-            ldr qC01, [pC, #( 6*16)]
-            ldr qC11, [pC, #( 7*16)]
-            ldr qC21, [pC, #( 8*16)]
-            ldr qC31, [pC, #( 9*16)]
-            ldr qC41, [pC, #(10*16)]
-            ldr qC51, [pC, #(11*16)]
-            ldr qC02, [pC, #(12*16)]
-            ldr qC12, [pC, #(13*16)]
-            ldr qC22, [pC, #(14*16)]
-            ldr qC32, [pC, #(15*16)]
-            ldr qC42, [pC, #(16*16)]
-            ldr qC52, [pC, #(17*16)]
-            ldr qC03, [pC, #(18*16)]
-            ldr qC13, [pC, #(19*16)]
-            ldr qC23, [pC, #(20*16)]
-            ldr qC33, [pC, #(21*16)]
-            ldr qC43, [pC, #(22*16)]
-            ldr qC53, [pC, #(23*16)]
-            /* if beta is -1, negate the loaded C's (FMLS can't be used) */
-            #ifdef BETAN1
-               fneg rC00, rC00
-               fneg rC01, rC01
-               fneg rC02, rC02
-               fneg rC03, rC03
-               fneg rC10, rC10
-               fneg rC11, rC11
-               fneg rC12, rC12
-               fneg rC13, rC13
-               fneg rC20, rC20
-               fneg rC21, rC21
-               fneg rC22, rC22
-               fneg rC23, rC23
-               fneg rC30, rC30
-               fneg rC31, rC31
-               fneg rC32, rC32
-               fneg rC33, rC33
-               fneg rC40, rC40
-               fneg rC41, rC41
-               fneg rC42, rC42
-               fneg rC43, rC43
-               fneg rC50, rC50
-               fneg rC51, rC51
-               fneg rC52, rC52
-               fneg rC53, rC53
-            #endif
-         #else
-         #if 0
-            /* to avoid zeroing, peel the first iteration */
+            /* to avoid zeroing, peel the first iteration (0.5% boost) */
             KLOOP_ITER1(fmul)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
 
-            subs KK, KK, #6
+            subs KK, KK, #1
             beq KDONE
-         #else
-            eor v8.16b, v8.16b, v8.16b
-            eor v9.16b, v9.16b, v9.16b
-            eor v10.16b, v10.16b, v10.16b
-            eor v11.16b, v11.16b, v11.16b
-            eor v12.16b, v12.16b, v12.16b
-            eor v13.16b, v13.16b, v13.16b
-            eor v14.16b, v14.16b, v14.16b
-            eor v15.16b, v15.16b, v15.16b
-            eor v16.16b, v16.16b, v16.16b
-            eor v17.16b, v17.16b, v17.16b
-            eor v18.16b, v18.16b, v18.16b
-            eor v19.16b, v19.16b, v19.16b
-            eor v20.16b, v20.16b, v20.16b
-            eor v21.16b, v21.16b, v21.16b
-            eor v22.16b, v22.16b, v22.16b
-            eor v23.16b, v23.16b, v23.16b
-            eor v24.16b, v24.16b, v24.16b
-            eor v25.16b, v25.16b, v25.16b
-            eor v26.16b, v26.16b, v26.16b
-            eor v27.16b, v27.16b, v27.16b
-            eor v28.16b, v28.16b, v28.16b
-            eor v29.16b, v29.16b, v29.16b
-            eor v30.16b, v30.16b, v30.16b
-            eor v31.16b, v31.16b, v31.16b
-         #endif
-         #endif
 
          .align 5
          KLOOP:
 
             KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
-            KLOOP_ITER1(fmla)
 
-            subs KK, KK, #6
+            subs KK, KK, #1
          bne KLOOP
 
       KDONE:
          mov KK, KK0
          mov pA, pA0
-            str qC00, [pC, #( 0*16)]
-            str qC10, [pC, #( 1*16)]
-            str qC20, [pC, #( 2*16)]
-            str qC30, [pC, #( 3*16)]
-            str qC40, [pC, #( 4*16)]
-            str qC50, [pC, #( 5*16)]
-            str qC01, [pC, #( 6*16)]
-            str qC11, [pC, #( 7*16)]
-            str qC21, [pC, #( 8*16)]
-            str qC31, [pC, #( 9*16)]
-            str qC41, [pC, #(10*16)]
-            str qC51, [pC, #(11*16)]
-            str qC02, [pC, #(12*16)]
-            str qC12, [pC, #(13*16)]
-            str qC22, [pC, #(14*16)]
-            str qC32, [pC, #(15*16)]
-            str qC42, [pC, #(16*16)]
-            str qC52, [pC, #(17*16)]
-            str qC03, [pC, #(18*16)]
-            str qC13, [pC, #(19*16)]
-            str qC23, [pC, #(20*16)]
-            str qC33, [pC, #(21*16)]
-            str qC43, [pC, #(22*16)]
-            str qC53, [pC, #(23*16)]
+            HandleC(pC, ( 0*16), rC00, qC00, rA0, qA0)
+            HandleC(pC, ( 1*16), rC10, qC10, rA1, qA1)
+            HandleC(pC, ( 2*16), rC20, qC20, rA2, qA2)
+            HandleC(pC, ( 3*16), rC30, qC30, rA3, qA3)
+            HandleC(pC, ( 4*16), rC40, qC40, rA4, qA4)
+            HandleC(pC, ( 5*16), rC50, qC50, rA5, qA5)
+            HandleC(pC, ( 6*16), rC01, qC01, rA0, qA0)
+            HandleC(pC, ( 7*16), rC11, qC11, rA1, qA1)
+            HandleC(pC, ( 8*16), rC21, qC21, rA2, qA2)
+            HandleC(pC, ( 9*16), rC31, qC31, rA3, qA3)
+            HandleC(pC, (10*16), rC41, qC41, rA4, qA4)
+            HandleC(pC, (11*16), rC51, qC51, rA5, qA5)
+            HandleC(pC, (12*16), rC02, qC02, rA0, qA0)
+            HandleC(pC, (13*16), rC12, qC12, rA1, qA1)
+            HandleC(pC, (14*16), rC22, qC22, rA2, qA2)
+            HandleC(pC, (15*16), rC32, qC32, rA3, qA3)
+            HandleC(pC, (16*16), rC42, qC42, rA4, qA4)
+            HandleC(pC, (17*16), rC52, qC52, rA5, qA5)
+            HandleC(pC, (18*16), rC03, qC03, rA0, qA0)
+            HandleC(pC, (19*16), rC13, qC13, rA1, qA1)
+            HandleC(pC, (20*16), rC23, qC23, rA2, qA2)
+            HandleC(pC, (21*16), rC33, qC33, rA3, qA3)
+            HandleC(pC, (22*16), rC43, qC43, rA4, qA4)
+            HandleC(pC, (23*16), rC53, qC53, rA5, qA5)
+
          add pC, pC, incCb
 
          subs nnu, nnu, #1
