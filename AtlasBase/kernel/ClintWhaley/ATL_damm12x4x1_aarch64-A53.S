@@ -1,7 +1,3 @@
-/*
- * Automatically Tuned Linear Algebra Software v3.11.35
- * Copyright (C) 2015 Rakib Hasan
- */
 /* This file is written for Cortex-A53. Works with 12x4 access-major storage. */
 /*
  * NOTES on Cortex-A53:
