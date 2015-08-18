@@ -191,7 +191,7 @@ void ATL_USERMM(SZT nmu, SZT nnu, SZT K, CTYPE *pA, CTYPE *pB, TYPE *pC,
    #define prefB(base, off) prfm PLDL1KEEP, [base, #(off)]
 #endif
 #ifndef prefC
-   #define prefC(base, off) prfm PLDL2KEEP, [base, #(off)]
+   #define prefC(base, off) prfm PLDL2STRM, [base, #(off)]
 #endif
 
 /*
@@ -227,9 +227,11 @@ ATL_asmdecor(ATL_USERMM):
    sub SP, SP, #FSIZE
    stp  d8,  d9, [SP,  #0]
    stp d10, d11, [SP, #16]
+   prefA(pA, 0)
    stp d12, d13, [SP, #32]
    stp d14, d15, [SP, #48]
    stp x19, x20, [SP, #64]
+   prefB(pB, 0)
    stp x21, x22, [SP, #80]
    stp x23, x24, [SP, #96]
    stp x25, x26, [SP, #112]
@@ -239,10 +241,9 @@ ATL_asmdecor(ATL_USERMM):
    mov pB, pB0
    mov KK, KK0
    mov nnu, nnu0
-   prefA(pA, 0)
 
    /* Load the remaining args from stack */
-   /*ldr pCn, [SP, #FSIZE]*/
+   ldr pCn, [SP, #FSIZE]
 
    /* incAm = MU*sizeof*K = 12*8*K = 3*32*K */
    add incAm, KK, KK, LSL #1     /* incAm = 3*K */
@@ -568,10 +569,13 @@ ATL_asmdecor(ATL_USERMM):
 DONE:
    ldp  d8,  d9, [SP,  #0]
    ldp d10, d11, [SP, #16]
+   prefA(pAn, 0)
    ldp d12, d13, [SP, #32]
    ldp d14, d15, [SP, #48]
+   prefB(pBn, 0)
    ldp x19, x20, [SP, #64]
    ldp x21, x22, [SP, #80]
+   prefC(pCn, 0)
    ldp x23, x24, [SP, #96]
    ldp x25, x26, [SP, #112]
    add SP, SP, #FSIZE

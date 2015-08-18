@@ -428,6 +428,7 @@ tar cvf atlas.tar \
      ATLAS/tune/sysinfo/masrch.c ATLAS/tune/sysinfo/time.c \
      ATLAS/tune/sysinfo/cacheSweep.c \
      ATLAS/tune/sysinfo/ATL_cputime.c ATLAS/tune/sysinfo/ATL_walltime.c \
+     ATLAS/tune/sysinfo/ATL_energymeter.c \
      ATLAS/tune/sysinfo/GetSysSum.c ATLAS/tune/sysinfo/matime.c \
      ATLAS/tune/sysinfo/emit_buildinfo.c ATLAS/tune/sysinfo/emit_lamch.c \
      ATLAS/tune/threads/test_*.c ATLAS/tune/threads/tune_*.c \
@@ -1543,7 +1544,7 @@ basfn = $(basdRCW)/atlas-ttune.base
 @ROUT ATLAS/tune/sysinfo
 basfn = $(basdRCW)/atlas.base
 @multidef rt 
-   tlb L1CacheSize GetSysSum ATL_walltime ATL_cputime time
+   tlb L1CacheSize GetSysSum ATL_walltime ATL_cputime time ATL_energymeter
    emit_buildinfo masrch matime
 @endmultidef
 @ROUT ATLAS/src/blas/gemm/UMMEXAMPLE

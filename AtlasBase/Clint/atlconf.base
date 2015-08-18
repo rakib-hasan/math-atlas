@@ -8501,14 +8501,22 @@ int main(int nargs, char **args)
    }
    if (mach != TI_C66_BM && ProbeCPUThrottle(verb, targarg, OS, asmb))
    {
-      fprintf(stderr, 
+      if (strstr(cdefs, "UseScaledTime"))
+      {
+         fprintf(stderr,
+            "CPU throttiling detected. Using power to estimated timings.\n");
+      }
+      else
+      {
+         fprintf(stderr, 
          "It appears you have cpu throttling enabled, which makes timings\n");
-      fprintf(stderr, 
+         fprintf(stderr, 
               "unreliable and an ATLAS install nonsensical.  Aborting.\n");
-      fprintf(stderr, 
+         fprintf(stderr, 
               "See ATLAS/INSTALL.txt for further information\n");
-      if (thrchk) exit(1);
-      else fprintf(stderr, "Ignoring CPU throttling by user override!\n\n");
+         if (thrchk) exit(1);
+         else fprintf(stderr, "Ignoring CPU throttling by user override!\n\n");
+      }
    }
    if (ncluster == 1) /* only probe when '-c 1' is passed during configure */
       ncluster = ProbeCPUCluster(verb, targarg, OS, asmb, ncpu);
