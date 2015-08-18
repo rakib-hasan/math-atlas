@@ -149,7 +149,7 @@ void ATL_USERMM(SZT nmu, SZT nnu, SZT K, CTYPE *pA, CTYPE *pB, TYPE *pC,
    #define prefB(base, off) prfm PLDL1KEEP, [base, #(off)]
 #endif
 #ifndef prefC
-   #define prefC(base, off) prfm PLDL2KEEP, [base, #(off)]
+   #define prefC(base, off) prfm PLDL2STRM, [base, #(off)]
 #endif
 
 #if defined(DREAL) || defined(DCPLX)
@@ -161,41 +161,37 @@ void ATL_USERMM(SZT nmu, SZT nnu, SZT K, CTYPE *pA, CTYPE *pB, TYPE *pC,
 /*
  * Re-arranging unrolled instructions doesn't help. So each iteration 
  * is replaced by this macro. The macro was parameterized for the 
- * first iteration of beta=0 case. But for some reason, peeling the 
- * first iteration of K-loop, hurts performance. 
- * - PREFETCH IS HURTING A LOT (20%) .
+ * first iteration.
+ * - PREFETCH INSIDE IS HURTING A LOT (20%) .
  */
 
 #define KLOOP_ITER1(op) \
    ldr qB0, [pB] ; \
-   ldr qA0, [pA] ; \
+   ldp qA0, qA1, [pA, #(0*16)] ; \
    op rC00, rA0, rB0 ; \
    op rC01, rA0, rB1 ; \
    DBL_LD ; \
-   ldr qA1, [pA, #(1*16)] ; \
    op rC02, rA0, rB2 ; \
    op rC03, rA0, rB3 ; \
  ; \
-   ldr qA2, [pA, #(2*16)] ; \
-   ldr qA3, [pA, #(3*16)] ; \
+   ldp qA2, qA3, [pA, #(2*16)] ; \
    op rC10, rA1, rB0 ; \
    op rC11, rA1, rB1 ; \
    op rC12, rA1, rB2 ; \
    op rC13, rA1, rB3 ; \
  ; \
-   ldr qA4, [pA, #(4*16)] ; \
-   ldr qA5, [pA, #(5*16)] ; \
+   ldp qA4, qA5, [pA, #(4*16)] ; \
    op rC20, rA2, rB0 ; \
    op rC21, rA2, rB1 ; \
    op rC22, rA2, rB2 ; \
-   add pB, pB, incBk ; \
    op rC23, rA2, rB3 ; \
-   add pA, pA, incAk ; \
+   add pB, pB, incBk ; \
  ; \
    op rC30, rA3, rB0 ; \
    op rC31, rA3, rB1 ; \
    op rC32, rA3, rB2 ; \
    op rC33, rA3, rB3 ; \
+   add pA, pA, incAk ; \
  ; \
    op rC40, rA4, rB0 ; \
    op rC41, rA4, rB1 ; \
@@ -207,6 +203,25 @@ void ATL_USERMM(SZT nmu, SZT nnu, SZT K, CTYPE *pA, CTYPE *pB, TYPE *pC,
    op rC52, rA5, rB2 ; \
    op rC53, rA5, rB3
 
+#ifndef BETA0
+   #define LD_C(pC, off, qT0, qT1) ldp qT0, qT1, [pC, #(off)]
+   #ifdef BETA1
+      #define OP_C(rC, rT) fadd rC, rC, rT
+   #else
+      #define OP_C(rC, rT) fsub rC, rC, rT
+   #endif
+#else
+   #define LD_C(pC, off, qT0, qT1)
+   #define OP_C(rC, rT)
+#endif
+
+
+#define HandleC(pC, off, rC0, qC0, rC1, qC1, rT0, qT0, rT1, qT1) \
+   LD_C(pC, off, qT0, qT1) ; \
+   OP_C(rC0, rT0) ; \
+   OP_C(rC1, rT1) ; \
+   stp qC0, qC1, [pC, #(off)]
+
 .text
 .align 5
 .global ATL_asmdecor(ATL_USERMM)
@@ -217,18 +232,17 @@ ATL_asmdecor(ATL_USERMM):
  */
    sub SP, SP, #FSIZE
    stp  d8,  d9, [SP,  #0]
-   prefB(pC, 0)
    stp d10, d11, [SP, #16]
    stp d12, d13, [SP, #32]
    stp d14, d15, [SP, #48]
 
    /* Save registers that will be destroyed inside loops */
    mov pA, pA0
+   prefA(pA0, 0)
    mov pB, pB0
-   prefB(pB, 0)
+   prefB(pB0, 0)
    mov KK, KK0
    mov nnu, nnu0
-   prefA(pA, 0)
 
    /* Load the remaining args from stack */
    ldr pCn, [SP, #FSIZE]
@@ -241,60 +255,6 @@ ATL_asmdecor(ATL_USERMM):
    .align 5
    MLOOP:
       NLOOP:
-         #ifndef BETA0
-            ldr qC00, [pC, #( 0*16)]
-            ldr qC10, [pC, #( 1*16)]
-            ldr qC20, [pC, #( 2*16)]
-            ldr qC30, [pC, #( 3*16)]
-            ldr qC40, [pC, #( 4*16)]
-            ldr qC50, [pC, #( 5*16)]
-            ldr qC01, [pC, #( 6*16)]
-            ldr qC11, [pC, #( 7*16)]
-            ldr qC21, [pC, #( 8*16)]
-            ldr qC31, [pC, #( 9*16)]
-            ldr qC41, [pC, #(10*16)]
-            ldr qC51, [pC, #(11*16)]
-            ldr qC02, [pC, #(12*16)]
-            ldr qC12, [pC, #(13*16)]
-            ldr qC22, [pC, #(14*16)]
-            ldr qC32, [pC, #(15*16)]
-            ldr qC42, [pC, #(16*16)]
-            ldr qC52, [pC, #(17*16)]
-            ldr qC03, [pC, #(18*16)]
-            ldr qC13, [pC, #(19*16)]
-            ldr qC23, [pC, #(20*16)]
-            ldr qC33, [pC, #(21*16)]
-            ldr qC43, [pC, #(22*16)]
-            ldr qC53, [pC, #(23*16)]
-            /* if beta is -1, negate the loaded C's (FMLS can't be used) */
-            #ifdef BETAN1
-               fneg rC00, rC00
-               fneg rC01, rC01
-               fneg rC02, rC02
-               fneg rC03, rC03
-               fneg rC10, rC10
-               fneg rC11, rC11
-               fneg rC12, rC12
-               fneg rC13, rC13
-               fneg rC20, rC20
-               fneg rC21, rC21
-               fneg rC22, rC22
-               fneg rC23, rC23
-               fneg rC30, rC30
-               fneg rC31, rC31
-               fneg rC32, rC32
-               fneg rC33, rC33
-               fneg rC40, rC40
-               fneg rC41, rC41
-               fneg rC42, rC42
-               fneg rC43, rC43
-               fneg rC50, rC50
-               fneg rC51, rC51
-               fneg rC52, rC52
-               fneg rC53, rC53
-            #endif
-         #else
-         #if 0
             /* to avoid zeroing, peel the first iteration */
             KLOOP_ITER1(fmul)
             KLOOP_ITER1(fmla)
@@ -305,33 +265,6 @@ ATL_asmdecor(ATL_USERMM):
 
             subs KK, KK, #6
             beq KDONE
-         #else
-            eor v8.16b, v8.16b, v8.16b
-            eor v9.16b, v9.16b, v9.16b
-            eor v10.16b, v10.16b, v10.16b
-            eor v11.16b, v11.16b, v11.16b
-            eor v12.16b, v12.16b, v12.16b
-            eor v13.16b, v13.16b, v13.16b
-            eor v14.16b, v14.16b, v14.16b
-            eor v15.16b, v15.16b, v15.16b
-            eor v16.16b, v16.16b, v16.16b
-            eor v17.16b, v17.16b, v17.16b
-            eor v18.16b, v18.16b, v18.16b
-            eor v19.16b, v19.16b, v19.16b
-            eor v20.16b, v20.16b, v20.16b
-            eor v21.16b, v21.16b, v21.16b
-            eor v22.16b, v22.16b, v22.16b
-            eor v23.16b, v23.16b, v23.16b
-            eor v24.16b, v24.16b, v24.16b
-            eor v25.16b, v25.16b, v25.16b
-            eor v26.16b, v26.16b, v26.16b
-            eor v27.16b, v27.16b, v27.16b
-            eor v28.16b, v28.16b, v28.16b
-            eor v29.16b, v29.16b, v29.16b
-            eor v30.16b, v30.16b, v30.16b
-            eor v31.16b, v31.16b, v31.16b
-         #endif
-         #endif
 
          .align 5
          KLOOP:
@@ -349,30 +282,19 @@ ATL_asmdecor(ATL_USERMM):
       KDONE:
          mov KK, KK0
          mov pA, pA0
-            str qC00, [pC, #( 0*16)]
-            str qC10, [pC, #( 1*16)]
-            str qC20, [pC, #( 2*16)]
-            str qC30, [pC, #( 3*16)]
-            str qC40, [pC, #( 4*16)]
-            str qC50, [pC, #( 5*16)]
-            str qC01, [pC, #( 6*16)]
-            str qC11, [pC, #( 7*16)]
-            str qC21, [pC, #( 8*16)]
-            str qC31, [pC, #( 9*16)]
-            str qC41, [pC, #(10*16)]
-            str qC51, [pC, #(11*16)]
-            str qC02, [pC, #(12*16)]
-            str qC12, [pC, #(13*16)]
-            str qC22, [pC, #(14*16)]
-            str qC32, [pC, #(15*16)]
-            str qC42, [pC, #(16*16)]
-            str qC52, [pC, #(17*16)]
-            str qC03, [pC, #(18*16)]
-            str qC13, [pC, #(19*16)]
-            str qC23, [pC, #(20*16)]
-            str qC33, [pC, #(21*16)]
-            str qC43, [pC, #(22*16)]
-            str qC53, [pC, #(23*16)]
+            HandleC(pC, ( 0*16), rC00,qC00, rC10,qC10, rA0,qA0, rA1,qA1)
+            HandleC(pC, ( 2*16), rC20,qC20, rC30,qC30, rA2,qA2, rA3,qA3)
+            HandleC(pC, ( 4*16), rC40,qC40, rC50,qC50, rA4,qA4, rA5,qA5)
+            HandleC(pC, ( 6*16), rC01,qC01, rC11,qC11, rA0,qA0, rA1,qA1)
+            HandleC(pC, ( 8*16), rC21,qC21, rC31,qC31, rA2,qA2, rA3,qA3)
+            HandleC(pC, (10*16), rC41,qC41, rC51,qC51, rA4,qA4, rA5,qA5)
+            HandleC(pC, (12*16), rC02,qC02, rC12,qC12, rA0,qA0, rA1,qA1)
+            HandleC(pC, (14*16), rC22,qC22, rC32,qC32, rA2,qA2, rA3,qA3)
+            HandleC(pC, (16*16), rC42,qC42, rC52,qC52, rA4,qA4, rA5,qA5)
+            HandleC(pC, (18*16), rC03,qC03, rC13,qC13, rA0,qA0, rA1,qA1)
+            HandleC(pC, (20*16), rC23,qC23, rC33,qC33, rA2,qA2, rA3,qA3)
+            HandleC(pC, (22*16), rC43,qC43, rC53,qC53, rA4,qA4, rA5,qA5)
+            
          add pC, pC, incCb
 
          subs nnu, nnu, #1
@@ -389,10 +311,11 @@ ATL_asmdecor(ATL_USERMM):
 
 DONE:
    ldp  d8,  d9, [SP,  #0]
-   prefA(pAn, 0)
-   ldp d10, d11, [SP, #16]
    prefB(pBn, 0)
+   ldp d10, d11, [SP, #16]
+   prefA(pAn, 0)
    ldp d12, d13, [SP, #32]
+   prefC(pCn, 0)
    ldp d14, d15, [SP, #48]
    add SP, SP, #FSIZE
    ret

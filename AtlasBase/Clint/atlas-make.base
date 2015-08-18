@@ -1213,7 +1213,7 @@ x@(pre)ma : force_build time.o @(pre)muladd.c @(pre)matime.o
 xmasrch : $(mySRCdir)/masrch.c
 	$(XCC) $(XCCFLAGS) -o $@ $(mySRCdir)/masrch.c
 
-@whiledef rout walltime cputime
+@whiledef rout walltime cputime energymeter
 ATL_@(rout).c : 
 	cp $(mySRCdir)/ATL_@(rout).c .
 ATL_@(rout).o : ATL_@(rout).c
@@ -3764,6 +3764,7 @@ AMMinstall:
 	cp $(MMTdir)/res/$(pre)geAMMRES.sum INSTALL_LOG/.
 	cd $(AMMdir) ; make $(pre)lib
 AMMinstall_cluster:
+	cd $(BLDdir)/tune/threads ; $(MAKE) IRun_nthr
 	cd $(BLDdir)/tune/threads ; $(MAKE) ITune_cluster
 	cd $(MMTdir) ; $(MAKE) tune_cluster pre=$(pre)
 MMinstall :

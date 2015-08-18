@@ -20745,6 +20745,90 @@ float SECOND(void) { return((float)time00()); }
 @ROUT time
 #include "ATL_walltime.c"
 #include "ATL_cputime.c"
+@ROUT ATL_energymeter
+/* 
+ * This file is intended to be used to measure energy consumption for 
+ * certain supported systems.
+ * WARNING: Reading may require root permissions!
+ */
+#if defined(JunoPower)
+/*
+ * Striped-down version oc Chris A Jones' code. Added by Rakib Hasan.
+ * From http://gitlab.ausrd.arm.com/cadeniyi/juno-energy-meter-code/tree/master
+ */
+   #include <stdint.h>
+   #include <stdlib.h>
+   #include <sys/mman.h>
+   #include <sys/fcntl.h>
+
+   #define APB_BASE_MEMORY 0x1C010000
+   #define APB_SIZE 0x120
+   #define A57_OFF ((0xD0/4)+14)
+   #define A53_OFF ((0xD0/4)+16)
+   #define A57_SCALE_FOR_J (1.62e-10)
+   #define A53_SCALE_FOR_J (8.1e-11)
+
+   double ATL_ScaleTime(const double t, const double e, const int coreId)
+   {
+      #if defined(UseE)
+         return(e);
+      #elif defined(UseTE)
+         return(t * e);
+      #else
+         const int clusterId = (coreId < 4) ? 0 : 1;
+         const int base_freq = clusterId ? 1100 : 850;
+         double avg_pow, avg_freq;
+         avg_pow = e1 / t1;
+         #if defined(UseLinerPower)
+            if (clusterId)
+               avg_freq = 464.29*avg_pow + 194.64;
+            else
+               avg_freq = 727.27*avg_pow + 231.82;
+         #else
+            if (clusterId)
+               avg_freq = 75.801 * avg_pow * avg_pow * avg_pow
+                        - 413.73 * avg_pow * avg_pow
+                        + 1114.0 * avg_pow - 42.866;
+            else
+               avg_freq = 876.88 * avg_pow * avg_pow * avg_pow
+                        - 2296.8 * avg_pow * avg_pow
+                        + 2462.1 * avg_pow - 117.74;
+         #endif
+         return(t * avg_freq / base_freq);
+      #endif
+   }
+
+   double ATL_energymeter(const int coreId)
+   {
+      static __thread int pfd = -1;
+      static __thread void *mmap_base = NULL;
+      const int clusterId = (coreId < 4) ? 0 : 1;
+      const int CL_OFF = clusterId ? A57_OFF : A53_OFF;
+      const double SCALE_FOR_J = clusterId ? A57_SCALE_FOR_J : A53_SCALE_FOR_J;
+      uint32_t *buffer;
+      uint64_t energy;
+      if (pfd < 0)
+      {
+         pfd = open("/dev/mem", O_RDONLY);
+         if (pfd < 0)
+            return((double)(0));
+         mmap_base = mmap(NULL, APB_SIZE, PROT_READ, MAP_SHARED,
+                           pfd, APB_BASE_MEMORY);
+         if (mmap_base == MAP_FAILED)
+         {
+            close(pfd);
+            pfd = 0;
+            return((double)(0));
+         }
+      }
+      buffer = (uint32_t *)(mmap_base);
+      energy = buffer[CL_OFF];
+      energy |= ((uint64_t)(buffer[CL_OFF+1])) << 32;
+      return((double)(energy*SCALE_FOR_J));
+   }
+#elif defined(TC2Power)
+#elif defined(OXU3Power)
+#endif
 @ROUT ATL_walltime
 @extract -b @(topd)/gen.inc what=cw
 
@@ -20869,54 +20953,6 @@ float SECOND(void) { return((float)time00()); }
       INIT = 1;
       t0 = clock();
       return(0.0);
-   }
-#elif defined(UseJunoPower)
-/*
- * Striped-down version oc Chris A Jones' code. Added by Rakib Hasan.
- * From http://gitlab.ausrd.arm.com/cadeniyi/juno-energy-meter-code/tree/master
- */
-   #include <stdint.h>
-   #include <stdlib.h>
-   #include <sys/mman.h>
-   #include <sys/fcntl.h>
-
-   #define APB_BASE_MEMORY 0x1C010000
-   #define APB_SIZE 0x120
-   #define A57_OFF ((0xD0/4)+14)
-   #define A53_OFF ((0xD0/4)+16)
-   #define A57_SCALE_FOR_J (1.62e-10)
-   #define A53_SCALE_FOR_J (8.1e-11)
-   #if defined(ForA53)
-      #define CL_OFF A53_OFF
-      #define SCALE_FOR_J A53_SCALE_FOR_J
-   #else
-      #define CL_OFF A57_OFF
-      #define SCALE_FOR_J A57_SCALE_FOR_J
-   #endif
-   double ATL_walltime(void)
-   {
-      static __thread int pfd = -1;
-      static __thread void *mmap_base = NULL;
-      uint32_t *buffer;
-      uint64_t energy;
-      if (pfd < 0)
-      {
-         pfd = open("/dev/mem", O_RDONLY);
-         if (pfd < 0)
-            return((double)(0));
-         mmap_base = mmap(NULL, APB_SIZE, PROT_READ, MAP_SHARED,
-                           pfd, APB_BASE_MEMORY);
-         if (mmap_base == MAP_FAILED)
-         {
-            close(pfd);
-            pfd = 0;
-            return((double)(0));
-         }
-      }
-      buffer = (uint32_t *)(mmap_base);
-      energy = buffer[CL_OFF];  /* NOTE: for now, use only A57 */
-      energy |= ((uint64_t)(buffer[CL_OFF+1])) << 32;
-      return((double)(energy*SCALE_FOR_J));
    }
 #elif defined(ArmCPS) && defined(ATL_USE_PERF)
    #include <stdlib.h>
@@ -35685,7 +35721,8 @@ double GetKmmMflop
    CINT movA, CINT movB, CINT movC,     /* which mat move in flush array? */
    int FLSIZE,                          /* min area to move in in bytes */
    CINT reps,                           /* # calls to kmm in one timing */
-   CINT LDC                             /* what should ldc be set to? */
+   CINT LDC,                            /* what should ldc be set to? */
+   CINT coreId                          /* Core ID for the running thread */
 )
 /*
  * Returns MFLOP rate of matmul kernel KMM
@@ -35830,6 +35867,12 @@ double GetKmmMflop
       }
    }
    a = A; b = B; c = C;
+   #ifdef UseScaledTime
+      double ATL_energymeter(const int);
+      double ATL_ScaleTime(const double, const double, const int);
+      double e0, e1;
+      e0 = ATL_energymeter(coreId);
+   #endif
    t0 = ATL_walltime();
    for (j=0,i=reps; i; i--)
    {
@@ -35852,6 +35895,10 @@ double GetKmmMflop
       }
    }
    t1 = ATL_walltime() - t0;
+   #ifdef UseScaledTime
+      e1 = ATL_energymeter(coreId) - e0;
+      t1 = ATL_ScaleTime(t1, e1, coreId);
+   #endif
    mf = reps;
    #ifdef TIME_TRMVK
       mf = (1.0*reps*mb*mb*nb) / (t1*1000000.0);
@@ -35902,7 +35949,8 @@ void *TimeOnCore(void *vp)
          while(!chkin[i]);
    #endif
    kp->mf = GetKmmMflop(kp->mb, kp->nb, kp->kb, kp->mu, kp->nu, kp->ku, 
-                        kp->movA, kp->movB, kp->movC, kp->FLSIZE, kp->reps, 0);
+                        kp->movA, kp->movB, kp->movC, kp->FLSIZE, kp->reps, 0, 
+                        kp->iam);
    return(NULL);
 }
 
@@ -35934,6 +35982,7 @@ double *TimeOnCores(struct kmm_struct *kb)
    unsigned char *chkin;
 
    p = kb->p;
+#if 0 /* this section was intended to time gemm without any new thread */
    if (p < 2)
    {
       mflops = malloc(sizeof(double));
@@ -35947,6 +35996,7 @@ double *TimeOnCores(struct kmm_struct *kb)
       free(chkin);
       return(mflops);
    }
+#endif
    kp = malloc(sizeof(struct kmm_struct)*p);
    threads = malloc(sizeof(pthread_t)*p);
    attr = malloc(sizeof(pthread_attr_t)*p);

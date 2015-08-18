@@ -6,7 +6,7 @@ ptobj = ATL_ptflushcache.o ATL_NumaTouchSpread.o
 @declare "obj = " y n
    ATL_flushcache.o
    ATL_flushCacheByAddr.o
-   ATL_cputime.o ATL_walltime.o
+   ATL_cputime.o ATL_walltime.o ATL_energymeter.o
    ATL_xerbla.o ATL_lcm.o ATL_buildinfo.o
    ATL_bitvec.o
    @whiledef pre z c d s
@@ -119,7 +119,7 @@ $(INCAdir)/atlas_@(pre)sysinfo.h : $(ATLFWAIT)
 	$(ATLFWAIT) -f $(INCAdir)/atlas_@(pre)sysinfo.h
 @endwhile
 
-@whiledef rout walltime cputime
+@whiledef rout walltime cputime energymeter
 ATL_@(rout).o : $(SYSdir)/ATL_@(rout).o
 	cp $(SYSdir)/ATL_@(rout).o ATL_@(rout).o
 $(SYSdir)/ATL_@(rout).o: $(SYSdir)/ATL_@(rout).c
