@@ -20778,7 +20778,7 @@ float SECOND(void) { return((float)time00()); }
          const int clusterId = (coreId < 4) ? 0 : 1;
          const int base_freq = clusterId ? 1100 : 850;
          double avg_pow, avg_freq;
-         avg_pow = e1 / t1;
+         avg_pow = e / t;
          #if defined(UseLinerPower)
             if (clusterId)
                avg_freq = 464.29*avg_pow + 194.64;

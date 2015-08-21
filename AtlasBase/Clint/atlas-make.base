@@ -2860,7 +2860,7 @@ bn = _b${betan}
 @(pre)ammtime_pt${bn}.o : $(mySRCdir)/mmtime_pt.c
 	$(KC) $(KCFLAGS) -c -DBETA${betan}=1 -D@(typ)=1 \
               -o @(pre)ammtime_pt${bn}.o $(mySRCdir)/mmtime_pt.c
-x@(pre)ammtime_pt : $(SYSdir)/time.o force_build
+x@(pre)ammtime_pt : $(SYSdir)/time.o $(SYSdir)/ATL_energymeter.o force_build
 	rm -f @(pre)mm.c
 	$(MAKE) @(pre)ammtime_pt${bn}.o
 @ptyp z c
@@ -2875,12 +2875,12 @@ x@(pre)ammtime_pt : $(SYSdir)/time.o force_build
                -D@(utp)=1 $(kmoves) -o @(pre)CAMM_bn.o -c $(mmrout)
 	$(CLINKER) $(CLINKFLAGS) -o x@(pre)ammtime_pt @(pre)ammtime_pt${bn}.o \
            @(pre)CAMM_b0.o @(pre)CAMM_b1.o @(pre)CAMM_bn.o \
-           $(SYSdir)/time.o $(LIBS)
+           $(SYSdir)/time.o $(SYSdir)/ATL_energymeter.o $(LIBS)
 @ptyp d s
 	@(MCC) @(MMFLAGS) -DBETA$(betan)=1 -DMB=$(mb) -DNB=$(nb) -DKB=$(kb) \
                -D@(typ)=1 $(kmoves) -o @(pre)ammmKT.o -c $(mmrout)
 	$(CLINKER) $(CLINKFLAGS) -o x@(pre)ammtime_pt @(pre)ammtime_pt${bn}.o \
-           @(pre)ammmKT.o $(SYSdir)/time.o $(LIBS)
+           @(pre)ammmKT.o $(SYSdir)/time.o $(SYSdir)/ATL_energymeter.o $(LIBS)
 @ptyp !
 	$(ATLRUN) $(MMTdir) x@(pre)ammtime_pt -p $(NPROC) $(TIDLIST) \
            -m $(mb) -n $(nb) -k $(kb) -um $(mu) -un $(nu) -uk $(ku) -R $(FMF) \
