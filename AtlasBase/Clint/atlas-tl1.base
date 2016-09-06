@@ -6949,6 +6949,9 @@ double TimeOnCores(int MAx, int MAy, int frcMF, size_t flshKB, int rt, int N,
    sumtm = 0;
    for (i=0; i<p; i++)
       sumtm += times[i];
+   free(dp);
+   free(times);
+   free(chkin);
    return(sumtm/p);
 }
 #endif
