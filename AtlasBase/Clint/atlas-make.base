@@ -3947,6 +3947,11 @@ x@(pre)l3blastst_mike : $(INCAdir)/atlas_type.h @(pre)l3blastst@(suf).o \
 @(pre)scblas : @(pre)cblas
 @(pre)tcblas : @(pre)cblas_pt
 
+@whiledef l 1 2 3
+x@(pre)tsl@(l)time : @(pre)tsl@(l)time.o @(pre)ststlib @(pre)sl@(l)lib @(pre)sfblas
+	$(FLINKER) $(FCLINKFLAGS) -o $@ @(pre)tsl@(l)time.o \
+                   $(TESTlib) $(F77BLASlib) $(ATLASlib) $(LIBS)
+@endwhile
 x@(pre)sl1time_ab : @(pre)l1time.o @(pre)ststlib @(pre)sl1lib @(pre)sfblas
 	$(FLINKER) $(FCLINKFLAGS) -o $@ @(pre)l1time.o \
                    $(TESTlib) $(F77BLASlib) $(ATLASlib) $(LIBS)
@@ -4070,10 +4075,15 @@ x@(pre)tlatime_fl_sb : @(pre)tlatimeF.o @(pre)tlapack @(pre)ttstlib \
                    $(TESTlib) $(FLAPACKlib) $(BLASlib) $(CBLASlib) \
                    $(ATLASlib) $(LIBS)
 
+@whiledef l 1 2 3
+@(pre)tsl@(l)time.o : $(mySRCdir)/l@(l)time_pt.c $(INCSdir)/atlas_misc.h \
+                  $(INCSdir)/atlas_level@(l).h 
+	$(KC) -o $@ -c $(KCFLAGS) -D@(typ) $(mySRCdir)/l@(l)time_pt.c
+@endwhile
 @(pre)l1time.o : $(mySRCdir)/l1time.c $(INCSdir)/atlas_misc.h \
                   $(INCSdir)/atlas_level1.h 
 	$(KC) -o $@ -c $(KCFLAGS) -D@(typ) $(mySRCdir)/l1time.c
-@(pre)tl1time.o : $(mySRCdir)/l3time.c $(INCSdir)/atlas_misc.h \
+@(pre)tl1time.o : $(mySRCdir)/l1time.c $(INCSdir)/atlas_misc.h \
                   $(INCSdir)/atlas_level1.h 
 	$(KC) -o $@ -c $(KCFLAGS) -D@(typ) -DATL_USEPTHREADS=1 \
                  $(mySRCdir)/l1time.c

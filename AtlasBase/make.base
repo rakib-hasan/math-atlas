@@ -167,7 +167,8 @@ tar cvf atlas.tar \
      ATLAS/bin/ormtst.c ATLAS/bin/extract.c ATLAS/bin/tvec*.c \
      ATLAS/bin/l?blastst.c  ATLAS/bin/atlas_tee.c ATLAS/bin/atlas_waitfile.c \
      ATLAS/bin/invtst.c ATLAS/bin/slvtst.c ATLAS/bin/lanbtst.c \
-     ATLAS/bin/l[a,3]time.c ATLAS/bin/?lamchtest.f \
+     ATLAS/bin/l[a,1,3]time.c ATLAS/bin/?lamchtest.f \
+     ATLAS/bin/l[1,2,3]time_pt.c \
      ATLAS/timing/*.sh ATLAS/timing/script.base ATLAS/man \
      ATLAS/include/atlas_*.h ATLAS/include/cblas.h ATLAS/include/cblas_test.h \
      ATLAS/include/clapack.h ATLAS/include/f77wrap_lapack.h \
@@ -2904,7 +2905,8 @@ Makefile : $(basdRCW)/config.base $(incf)
    dlp1000.f ftime00.c substr.c ccobj.c stattime.c qrtst.c ormtst.c 
    dlamchtest.f slamchtest.f l2peak.sh sum2csv.sh extract.c
    tvecget.c tvecrename.c tvecscale.c tvecreduce.c tveccat.c tvecselect.c
-   tvecprint.c tvecjoin.c tvecunify.c tvecratio.c lcm.c
+   tvecprint.c tvecjoin.c tvecunify.c tvecratio.c lcm.c l1time_pt.c l2time_pt.c
+   l3time_pt.c
 @enddeclare
 
 all : $(files)
@@ -2921,8 +2923,8 @@ Make.ext : $(topd)/make.base
    @endwhile
    @undef typ
 @endwhile
-@multidef bs atlas-tl1.base
-@whiledef rt l1time
+@multidef bs atlas-tl1.base atlas-tl1.base atlas-tl2.base atlas-tl3.base
+@whiledef rt l1time l1time_pt l2time_pt l3time_pt
 @(rt).c : $(basdRCW)/@(bs)
 	$(extC) -b $(basdRCW)/@(bs) -o $@ rout=$*
    @undef bs
