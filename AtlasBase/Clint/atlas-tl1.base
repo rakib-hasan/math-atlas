@@ -6929,6 +6929,7 @@ double TimeOnCores(int MAx, int MAy, int frcMF, size_t flshKB, int rt, int N,
    ATL_thread_t tp[ATL_NTHREADS];
    int i;
    unsigned char *chkin;
+   assert( p <= ATL_NTHREADS );
    dp = malloc(sizeof(l1_struct)*p);
    times = malloc(sizeof(double)*p);
    chkin = malloc(sizeof(char)*p);
@@ -6938,8 +6939,7 @@ double TimeOnCores(int MAx, int MAy, int frcMF, size_t flshKB, int rt, int N,
       dp[i].MAx = MAx; dp[i].MAy = MAy; dp[i].frcMF = frcMF; dp[i].rt = rt; 
       dp[i].N = N; dp[i].incX = incX; dp[i].incY = incY; dp[i].flshKB = flshKB;
       dp[i].alp = alp; dp[i].bet = bet;
-      dp[i].id = i;
-      dp[i].pid = pids[i];
+      dp[i].id = i; dp[i].p = p; dp[i].pid = pids[i];
       dp[i].chkin = chkin;
       dp[i].times = times;
       assert(!ATL_thread_start(tp+i, pids[i], 1, TimeOnCore, dp+i));

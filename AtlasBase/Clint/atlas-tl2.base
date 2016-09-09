@@ -2509,11 +2509,10 @@ double DoTime2(int frcMF, size_t flsh, int rt, int M, int N, int ldag,
    TYPE *X, *Y, *A;
 
    flsh *= 1024;
-   vecsz = N SHIFT;
-   vecXsz = vecsz * incX     * sizeof(TYPE);
-   vecYsz = vecsz * incY     * sizeof(TYPE);
-   szA    = vecsz * lda * sizeof(TYPE);
-   setsz  = vecsz * (2 + M)  * sizeof(TYPE);
+   vecXsz = (M SHIFT) * incX     * sizeof(TYPE);
+   vecYsz = (N SHIFT) * incY     * sizeof(TYPE);
+   szA    = (N SHIFT) * lda      * sizeof(TYPE);
+   setsz  = ((M + N + M*N)SHIFT) * sizeof(TYPE);
    vecXsz = ATL_MulByCachelen(ATL_DivByCachelen(vecXsz + ATL_Cachelen-1));
    vecYsz = ATL_MulByCachelen(ATL_DivByCachelen(vecYsz + ATL_Cachelen-1));
    vecsz = vecXsz + vecYsz + szA + 3*ATL_Cachelen;
@@ -2694,6 +2693,7 @@ double TimeOnCores(int frcMF, size_t flshKB, int rt, int M, int N,
    ATL_thread_t tp[ATL_NTHREADS];
    int i;
    unsigned char *chkin;
+   assert( p <= ATL_NTHREADS );
    dp = malloc(sizeof(l2_struct)*p);
    times = malloc(sizeof(double)*p);
    chkin = malloc(sizeof(char)*p);

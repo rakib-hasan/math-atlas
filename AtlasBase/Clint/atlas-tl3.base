@@ -454,13 +454,13 @@ double DoTime3(int frcMF, size_t flsh, int rt, int M, int N, int K, int ldaG,
    size_t i, sz, nsets, setsz, szA, szB, szC, setSH, reps=1;
    int lda = M+ldaG;
    int ldb = K+ldbG;
-   int ldc = M+ldbG;
+   int ldc = M+ldcG;
    double t0, t1;
    void *vp;
    TYPE *A, *B, *C;
 
    flsh *= 1024;
-   szA = (lda SHIFT) * M * sizeof(TYPE);
+   szA = (lda SHIFT) * K * sizeof(TYPE);
    szB = (ldb SHIFT) * N * sizeof(TYPE);
    szC = (ldc SHIFT) * N * sizeof(TYPE);
    setsz  = ((M*K + K*N + M*N)SHIFT)  * sizeof(TYPE);
@@ -582,6 +582,7 @@ double TimeOnCores(int frcMF, size_t flshKB, int rt, int M, int N, int K,
    ATL_thread_t tp[ATL_NTHREADS];
    int i;
    unsigned char *chkin;
+   assert( p <= ATL_NTHREADS );
    dp = malloc(sizeof(l3_struct)*p);
    times = malloc(sizeof(double)*p);
    chkin = malloc(sizeof(char)*p);
