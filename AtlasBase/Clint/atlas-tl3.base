@@ -376,7 +376,8 @@ double opbl3
 
 double DoTime2(int frcMF, size_t flsh, int rt, int M, int N, int K, int ldaG, 
                int ldbG, int ldcG, int TA, int TB, int UL, int DI, int SD, 
-               double *alp, double *bet)
+               double *alp, double *bet, int id, int P, 
+               volatile unsigned char *chkin)
 {
    size_t i, sz, nsets, setsz, szA, szB, setSH, reps=1;
    int lda = M+ldaG;
@@ -413,6 +414,11 @@ double DoTime2(int frcMF, size_t flsh, int rt, int M, int N, int K, int ldaG,
       d = opbl3(rt, M, N, 0);
       reps = ((frcMF * 1e6) / d) + 0.9;
    }
+   #ifdef ATL_NCPU
+      chkin[id] = 1;
+      for (i=0; i < P; i++)
+         while(!chkin[i]);       /* barrier */
+   #endif
    switch(rt)
    {
    @whiledef bn trsm
@@ -449,7 +455,8 @@ double DoTime2(int frcMF, size_t flsh, int rt, int M, int N, int K, int ldaG,
 
 double DoTime3(int frcMF, size_t flsh, int rt, int M, int N, int K, int ldaG, 
                int ldbG, int ldcG, int TA, int TB, int UL, int DI, int SD, 
-               double *alp, double *bet)
+               double *alp, double *bet, int id, int P, 
+               volatile unsigned char *chkin)
 {
    size_t i, sz, nsets, setsz, szA, szB, szC, setSH, reps=1;
    int lda = M+ldaG;
@@ -488,6 +495,11 @@ double DoTime3(int frcMF, size_t flsh, int rt, int M, int N, int K, int ldaG,
       d = opbl3(rt, M, N, K);
       reps = ((frcMF * 1e6) / d) + 0.9;
    }
+   #ifdef ATL_NCPU
+      chkin[id] = 1;
+      for (i=0; i < P; i++)
+         while(!chkin[i]);       /* barrier */
+   #endif
    switch(rt)
    {
    @whiledef bn gemm
@@ -537,24 +549,16 @@ int RoutHas2Mat(int rt)
 void *TimeOnCore(void *vp)
 {
    l3_struct *dp = vp;
-   const int P = dp->p;
-   int i;
-   volatile unsigned char *chkin = dp->chkin;
-   #ifdef ATL_NCPU
-      chkin[dp->id] = 1;
-      for (i=0; i < P; i++)
-         while(!chkin[i]);       /* barrier */
-   #endif
    if (RoutHas2Mat(dp->rt)) // rout has two mat
       dp->times[dp->id] = DoTime2(dp->frcMF, dp->flshKB, dp->rt, dp->M, 
                                   dp->N, dp->K, dp->ldaG, dp->ldbG, dp->ldcG, 
                                   dp->TA, dp->TB, dp->UL, dp->DI, dp->SD, 
-                                  dp->alp, dp->bet);
+                                  dp->alp, dp->bet, dp->id, dp->p, dp->chkin);
    else
       dp->times[dp->id] = DoTime3(dp->frcMF, dp->flshKB, dp->rt, dp->M, 
                                   dp->N, dp->K, dp->ldaG, dp->ldbG, dp->ldcG, 
                                   dp->TA, dp->TB, dp->UL, dp->DI, dp->SD, 
-                                  dp->alp, dp->bet);
+                                  dp->alp, dp->bet, dp->id, dp->p, dp->chkin);
 }
 
 #ifndef ATL_NCPU
@@ -754,7 +758,8 @@ void TimeAllL3
                                                         alp, bet, p, pids);
                                        mf = opbl3(rt, M, N, K) / (tm*1e6);
                                        printf(frm, nblas[rt], cSD, cUP, cDI, 
-                                       cTA, cTB, cALP, cBET, M, N, K, tm, mf);
+                                         cTA, cTB, cALP, cBET, M, N, K, tm, mf);
+                                       fflush(stdout);
                                     }
                                  }
                               }
