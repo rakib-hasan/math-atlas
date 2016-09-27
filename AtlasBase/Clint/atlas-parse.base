@@ -34,13 +34,63 @@
 # PFTUNEx   : Kernel uses pref_x(mem) macro for each op=x (A,y,x).  prefetch
 #             inst can be varied wt this macro, as can fetch distance.
 #
+@ROUT cpread
+#ifndef ATLAS_CPPARSE_H
+   #define ATLAS_CPPARSE_H
+
+#include "atlas_genparse.h"
+#include "atlas_enum.h"
+
+#define ATL_CPMVECAB  1
+#define ATL_CPMVECC   2
+#define ATL_CPKVECAB  3
+#define ATL_CPKVECC   4
+#define ATL_CPBLKMJAB 5
+#define ATL_CPBLKMJC  6
+
+#define CPF_TRANS     0  /* 1: transpose, else NoTrans */
+#define CPF_CONJ      1  /* 1: Conjugate, else NoConj */
+#define CPF_FROMCM    2  /* 1: copy from col-maj, else copy to col-major */
+
+#define CPF_DEFAULT   0  /* default is no bits set */
+typedef struct CPNode ATL_cpnode_t;
+struct CPNode
+{
+   ATL_cpnode_t *next;
+   char *rout, *auth, *comp, *cflags;
+   char *genstr;
+   char *exflags;
+   char *str;
+   double mflop[4];
+   int ID;       /* ID unique in <pre>copy.idx */
+   int STGID;    /* storage ID predefined vals: [1-6] */
+   int mu, nu;   /* unrolling along M & N dims, respectively */
+   int vlen;     /* vector length, or 0 if doesn't matter to storage */
+   unsigned int flag, asmbits;
+};
 @ROUT mmread
 #ifndef ATLAS_MMPARSE_H
    #define ATLAS_MMPARSE_H
 
 #include "atlas_genparse.h"
 #include "atlas_enum.h"
-
+/*
+ * BLAS kernel types that we've potentially got generators for
+ */
+#define ATL_KGEMM       0
+#define ATL_KSYRK       1
+#define ATL_KSYMM       2 /* not yet supported */
+#define ATL_KTRMM       3 /* not yet supported */
+#define ATL_KTRSM       4 /* only supported for non-generated case */
+#define ATL_KGECPFA     5 /* TA trans setting, TB row/col matrix access */
+#define ATL_KGECP2A     6 /* TA trans setting, TB row/col matrix access */
+#define ATL_KGECPFC     7
+#define ATL_KGECP2C     8
+#define ATL_KSKCPFC     9 /* syrk C copy */
+#define ATL_KSKCP2C    10 /* syrk C copy */
+/*
+ * Structure bit position in flag
+ */
 #define MMF_SINGLE      0  /* 1: single precision, else double */
 #define MMF_COMPLEX     1  /* 1: complex type, else real */
 #define MMF_LDCTOP      2  /* 1: load C before K-loop, 0: ld after */
@@ -1037,6 +1087,8 @@ void *RemoveNodeFromList(void *vb, void *vp, int nxtoff)
 }
 
 #endif /* end atlas_genparse.h guard */
+@ROUT cpread
+   @define rt @cp@
 @ROUT mmread
 #ifndef ATL_DEF_MMFLAG
    #define ATL_DEF_MMFLAG @up@(rt)F_DEFAULT
@@ -1046,7 +1098,7 @@ void *RemoveNodeFromList(void *vb, void *vp, int nxtoff)
    @define rt @mv@
 @ROUT r1read
    @define rt @r1@
-@ROUT r1read mvread mmread
+@ROUT r1read mvread mmread cpread
 @iexp ip @(ip) 1 +
 /* procedure @(ip) */
 static ATL_@(rt)node_t *Get@up@(rt)Node(void)
@@ -1088,7 +1140,7 @@ static ATL_@(rt)node_t *Clone@up@(rt)Node(ATL_@(rt)node_t *dup)
 @ROUT r1read mvread
    if (dup->kname)
       p->kname = DupString(dup->kname);
-@ROUT r1read mvread mmread
+@ROUT r1read mvread mmread cpread
    p->next = NULL;
    return(p);
 }
@@ -1173,7 +1225,7 @@ static ATL_@(rt)node_t *Kill@up@(rt)Node(ATL_@(rt)node_t *die)
 @ROUT r1read mvread
       if (die->kname)
          free(die->kname);
-@ROUT r1read mvread mmread
+@ROUT r1read mvread mmread cpread
       free(die);
    }
    return(p);
@@ -1254,7 +1306,7 @@ void *KillAllMMStrings(ATL_mmnode_t *mb)
    }
 }
 
-@ROUT r1read mvread mmread
+@ROUT r1read mvread mmread cpread
 @iexp ip @(ip) 1 +
 /* procedure @(ip): frees all ->genstr entries in queue b */
 static void KillAll@up@(rt)Genstr(ATL_@(rt)node_t *b)
@@ -1638,7 +1690,7 @@ static ATL_@(rt)node_t *Parse@up@(rt)Line(char *ln)
       p->@(kk) = 0;
 
 @endwhile
-@ROUT mmread 
+@ROUT mmread cpread
 @whiledef jj vlen
    sp = strstr(ln, "@up@(jj)=");
    if (sp)
@@ -1646,6 +1698,7 @@ static ATL_@(rt)node_t *Parse@up@(rt)Line(char *ln)
    else
       p->@(jj) = 1;
 @endwhile
+@ROUT mmread
 @whiledef jj mu nu ku kbmin kbmax pref ivar pfLS szExtra stgA stgB stgC blask
    sp = strstr(ln, "@up@(jj)=");
    if (sp)
@@ -1661,6 +1714,8 @@ static ATL_@(rt)node_t *Parse@up@(rt)Line(char *ln)
       p->@(jj)B = 0;
 @endwhile
    @multidef jj ID SSE
+@ROUT cpread
+   @multidef jj ID MU NU STGID
 @ROUT mvread r1read 
    @multidef jj ID MU NU minN minM alignX alignY alignA SSE CacheElts rankR
 @ROUT r1read mvread mmread
@@ -1685,11 +1740,13 @@ static ATL_@(rt)node_t *Parse@up@(rt)Line(char *ln)
    KUISKB NOBCAST
 @endmultidef
 
+@ROUT cpread
+@multidef fl TRANS CONJ FROMCM
 @ROUT mvread
 @multidef fl X87 LDYTOP ALLALIGNXY AXPYBASED GEMMBASED CONJDEF FNU ALIGNX2A ADDCFLAGS PFTUNABLE
 @ROUT r1read
 @multidef fl X87 ALLALIGNXY FNU INCYISONE ALIGNX2A ADDCFLAGS PFTUNABLE
-@ROUT r1read mvread mmread
+@ROUT r1read mvread mmread cpread
 @whiledef fl
    sp = strstr(ln, "@(fl)=");
    if (sp)
@@ -1703,6 +1760,9 @@ static ATL_@(rt)node_t *Parse@up@(rt)Line(char *ln)
 
    sp = strstr(ln, "MFLOP=");
    if (sp)
+@ROUT cpread
+      GetDoubleArr(sp+6, 4, p->mflop);
+@ROUT r1read mvread mmread
       GetDoubleArr(sp+6, 8, p->mflop);
 
    sp = strstr(ln, "ASM=");
@@ -1730,9 +1790,7 @@ static ATL_@(rt)node_t *Parse@up@(rt)Line(char *ln)
          assert(0);
    }
 @endwhile
-@ROUT mvread r1read mmread
-@skip   sp = strstr(ln, "MFLOP=");
-@skip   if (sp) p->mflop = atof(sp+6);
+@ROUT mvread r1read mmread cpread
 
 @ROUT mvread r1read `@define kw @kname@`
 @whiledef kw rout auth comp cflags
@@ -1756,6 +1814,10 @@ static void Print@up@(rt)Line(FILE *fpout, ATL_@(rt)node_t *np)
       return;
    if (!np->rout)
       np->ID = 0;
+@ROUT cpread
+   fprintf(fpout, "ID=%d STGID=%d ROUT='%s' AUTH='%s'",
+           np->ID, np->STGID, np->rout ? np->rout : "generated", 
+           np->auth ? np->auth : "R. Clint Whaley");
 @ROUT r1read
    fprintf(fpout, "ID=%d ROUT='%s' AUTH='%s'",
            np->ID, np->rout ? np->rout : "generated", 
@@ -1781,9 +1843,14 @@ static void Print@up@(rt)Line(FILE *fpout, ATL_@(rt)node_t *np)
            np->ID, np->rout ? np->rout : "generated", 
            np->auth ? np->auth : "R. Clint Whaley", ta, tb);
 
-@ROUT mvread r1read mmread
+@ROUT mvread r1read mmread cpread
    fprintf(fpout, "   ");
    i = 3;
+@ROUT cpread
+@whiledef kw mu nu vlen
+   if (i > 70) { fprintf(fpout, " \\\n   "); i = 3; }
+   i += fprintf(fpout, "@up@(kw)=%d ", np->@(kw));
+@endwhile
 @ROUT mvread r1read
 @whiledef kw MU NU minN minM alignX alignY alignA SSE CacheElts rankR
    if (i > 70) { fprintf(fpout, " \\\n   "); i = 3; }
@@ -1814,6 +1881,8 @@ static void Print@up@(rt)Line(FILE *fpout, ATL_@(rt)node_t *np)
       X87 LDCTOP KRUNTIME AOUTER PFACOLS PFABLK PFBCOLS PFCELTS L14NB KVEC
       KUISKB NOBCAST
    @endmultidef
+@ROUT cpread
+   @define kwd @FROMCM TRANS CONJ@
 @ROUT r1read 
    @define kwd @X87 INCYISONE FNU ADDCFLAGS ALIGNX2A PFTUNABLE@
 @ROUT mvread 
@@ -1824,14 +1893,26 @@ static void Print@up@(rt)Line(FILE *fpout, ATL_@(rt)node_t *np)
    if (np->@(jj)B != 0)
       i += fprintf(fpout, "@up@(jj)=%d ", np->@(jj)B);
 @endwhile
-@ROUT mvread r1read mmread
+@ROUT mvread r1read mmread cpread
 @whiledef kw @(kwd)
    if (i+@len@(kw) > 72) { fprintf(fpout, " \\\n   "); i = 3; }
    i += fprintf(fpout, "@(kw)=%d ", FLAG_IS_SET(np->flag, @up@(rt)F_@(kw)));
 @endwhile
 
-   if (np->mflop[0]+np->mflop[1]+np->mflop[2]+np->mflop[3]+np->mflop[4]+
-       np->mflop[5]+np->mflop[6] != 0.0)
+   k = 0;  /* no need to write mflop */
+@ROUT cpread
+   for (j=0; j < 4; j++)
+@ROUT mvread r1read mmread
+   for (j=0; j < 8; j++)
+@ROUT mvread r1read mmread cpread
+   {
+      if (np->mflop[j] != 0.0)
+      {
+         k = 1;
+         break;
+      }
+   }
+   if (k)
    {
       if (i > 3) { fprintf(fpout, " \\\n   "); i = 3; }
       i += fprintf(fpout, "MFLOP=%le", np->mflop[0]);
@@ -2738,7 +2819,7 @@ static void MMApplyMoves2Flags
       mmp->flag = ((mmp->flag) & mvMSK) | mvSET;
 }
 
-@ROUT mvread r1read mmread
+@ROUT mvread r1read mmread cpread
 #endif  /* end atlas_@(rt)parse.h guard */
 @ROUT atlas_mvtesttime.h
    @define rt @mv@
@@ -3382,6 +3463,9 @@ static void FillIn@up@(rt)ExtractGenStrings(char pre, ATL_@(ru)node_t *kb)
 @ROUT atlas_r1testtime.h atlas_r2testtime.h atlas_mvtesttime.h
 #endif  /* end guard around atlas_@(rt)testtime.h */
 @ROUT atlas_mmtesttime.h
+#ifndef Mmax
+   #define Mmax(x_, y_) ( ((x_) >= (y_)) ? (x_):(y_) )
+#endif
 @iexp ip @(ip) 1 +
 /* procedure @(ip) */
 double MMMflop2Time(char pre, int M, int N, int K, double mf)
@@ -3404,24 +3488,116 @@ double MMTime2Mflop(char pre, int M, int N, int K, double time)
 
 @iexp ip @(ip) 1 +
 /* procedure @(ip) */
+static double CopyMflop2Time(char pre, int M, int N, double mf)
+/*
+ * Translates mflop rate mf into time, assuming M*N flops
+ */
+{
+   return(((2.0*M)*N) / (1e6*mf));
+}
+
+@iexp ip @(ip) 1 +
+/* procedure @(ip) */
 char *MMGetGenName(char pre, int kb, ATL_mmnode_t *mp)
 {
 #ifdef ATL_GENERATE  /* generating funcs get unique name */
-   char *nm="amm";
-   if (mp->blask == 1)
+   char *nm;
+   switch(mp->blask)
+   {
+   case ATL_KSYRK:
       nm = "syrk";
-   else if (mp->blask == 2)
+      break;
+   case ATL_KSYMM:
       nm = "symm";
-   else if (mp->blask == 2)
-      nm = "symm";
-   else if (mp->blask == 3)
+      break;
+   case ATL_KTRMM:
       nm = "trmm";
+      break;
+   case ATL_KTRSM:
+      nm = "trsm";
+      break;
+   case ATL_KGECP2A:
+      nm = "cp2A";
+      break;
+   case ATL_KGECPFA:
+      nm = "cpFA";
+      break;
+   case ATL_KGECP2C:
+      nm = "cp2C";
+      break;
+   case ATL_KGECPFC:
+      nm = "cpFC";
+      break;
+   case ATL_KSKCP2C:
+      nm = "cp2SK";
+      break;
+   case ATL_KSKCPFC:
+      nm = "cpFSK";
+      break;
+   case ATL_KGEMM:
+   default:
+      nm = "amm";
+   }
    return(GetMMFilename(pre, nm, mp));
 #else                       /* tuning gets default name that is overwritten */
    return(DupString("ATL_tmp.c")); /* avoids cluttering dir wt unused files */
 #endif
 }
 
+char *MMGetCpGenString
+(
+   char pre,                    /* precision/type prefix */
+   ATL_mmnode_t *mp             /* mmkern ptr */
+)
+{
+   char *sp, *gen, *vec;
+   size_t sz;
+
+   if (mp->vlen < 2)
+      vec = "no";
+   else if (FLAG_IS_SET(mp->flag, MMF_KVEC))
+      vec = "kdim";
+   else
+      vec = "mdim";
+
+   if (mp->blask == ATL_KGECPFC || mp->blask == ATL_KGECP2C || 
+       mp->blask == ATL_KSKCPFC || mp->blask == ATL_KSKCP2C)
+   {
+      switch (mp->blask)
+      {
+      case ATL_KGECPFC:
+         gen = "C2blk";
+         break;
+      case ATL_KGECP2C:
+         gen = "blk2C";
+         break;
+      case ATL_KSKCPFC:
+         gen = "syC2blk";
+         break;
+      case ATL_KSKCP2C:
+         gen = "syblk2C";
+         break;
+      }
+      sz = 66 + NumDecDigits(mp->mu);
+      sz += NumDecDigits(mp->nu);
+      sz += NumDecDigits(mp->vlen);
+      sz += strlen(mp->rout);
+      sp = malloc(sz);
+      assert(sp);
+      sprintf(sp, 
+"make gen_%s pre=%c vl=%d mu=%d nu=%d cpvl=1 alpha=1 beta=-1 vec=%s rt=%s",
+              gen, pre, mp->vlen, mp->mu, mp->nu, vec, mp->rout);
+      return(sp);
+   }
+   sz = 53 + NumDecDigits(Mmax(mp->mu, mp->nu));
+   sz += strlen(mp->rout);
+   sp = malloc(sz);
+   assert(sp);
+   sprintf(sp, "make gen_A%c2blk UR=%d alpha=1 kmaj=%d vec=%s rt=%s", 
+           mp->TA==AtlasTrans?'T':'N', Mmax(mp->mu, mp->nu), 
+           FLAG_IS_SET(mp->flag,MMF_KVEC), vec, mp->rout);
+   return(sp);
+}
 @iexp ip @(ip) 1 +
 /* procedure @(ip) */
 char *MMGetGenString
@@ -3438,6 +3614,8 @@ char *MMGetGenString
    int ku=mp->ku;
    int kb;
 
+   if (mp->blask >= ATL_KGECPFA && mp->blask <= ATL_KSKCP2C)
+      return(MMGetCpGenString(pre, mp));
    if (FLAG_IS_SET(mp->flag, MMF_KUISKB))
    {
       if (FLAG_IS_SET(mp->flag, MMF_KVEC))
@@ -3458,14 +3636,55 @@ char *MMGetGenString
    }
    else 
       assert(mp->mu % mp->vlen == 0);
-   if (mp->blask == 1) /* 0:ammm, 1:syrk, 2:symm, 3:trmm */
+   switch(mp->blask)
+   {/* 0:ammm, 1:syrk, 2:symm, 3:trmm */
+   case ATL_KSYRK:
       sp = "amsyrk";
-   else if (mp->blask == 2)
+      break;
+   case ATL_KSYMM:
       sp = "amsymm";
-   else if (mp->blask == 3)
+      break;
+   case ATL_KTRMM:
       sp = "amtrmm";
-   else
+      break;
+   case ATL_KTRSM:
+      sp = "amtrsm";
+      break;
+   case ATL_KGECPFA:
+      if (mp->TA == AtlasTrans)
+         sp = "AT2blk";
+      else if (mp->TA == AtlasConjTrans)
+         sp = "cAT2blk";
+      else if (mp->TA == AtlasConj)
+         sp = "cAN2blk";
+      else
+         sp = "AN2blk";
+      break;
+   case ATL_KGECP2A:
+      if (mp->TA == AtlasTrans)
+         sp = "blk2AT";
+      else if (mp->TA == AtlasConjTrans)
+         sp = "cblk2AT";
+      else if (mp->TA == AtlasConj)
+         sp = "cblk2AN";
+      else
+         sp = "blk2AN";
+      break;
+   case ATL_KGECPFC:
+      sp = "blk2C";
+      break;
+   case ATL_KGECP2C:
+      sp = "C2blk";
+      break;
+   case ATL_KSKCPFC:
+      sp = "SYC2blk";
+      break;
+   case ATL_KSKCP2C:
+      sp = "SYblk2C";
+      break;
+   default:
       sp = "amm";
+   }
 
    if (FLAG_IS_SET(mp->flag, MMF_KRUNTIME))
       kb = 0;
@@ -3636,16 +3855,16 @@ char *MMGetTestString
  */
    switch(mp->blask)
    {
-   case 1:
+   case ATL_KSYRK:
       nm = "syrk";
       break;
-   case 2:
+   case ATL_KSYMM:
       nm = "symm";
       break;
-   case 3:
+   case ATL_KTRMM:
       nm = "trmm";
       break;
-   default:
+   default:   /* need to add copy kerns later */
       nm = "ammm";
    }
    len = 22 + 21;                              /* begin & end */
@@ -4014,6 +4233,7 @@ double TimeMMKernel3F
  * flag - take actions the following actions if bit location is set:
  *    0 : ignore any prior output file on output
  *    1 : time in serial rather than parallel
+ * NOTE: this kernel not updated to time copy codes.  AFAIK, doesn't need to
  */
 {
    char fnam[128], ln[4096];  /* security from 1991 */
@@ -4073,21 +4293,28 @@ double TimeMMKernel3F
       "res/%cammm%d_%dx%dx%d_%dx%dx%d_%x_v%c%db%d_pf%xx%d_%d.ktim",
               pre, mmp->ID, mb, nb, KB, mmp->mu, mmp->nu, KU,
               mmp->flag, ch, mmp->vlen, beta, mmp->pref, mmp->pfLS, cflush);
-      if (mmp->blask == 1)
+      if (mmp->blask == ATL_KSYRK)
       {
          fnam[5] = 's';
          fnam[6] = 'y';
          fnam[7] = 'r';
          fnam[8] = 'k';
       }
-      else if (mmp->blask == 2)
+      else if (mmp->blask == ATL_KSYMM)
       {
          fnam[5] = 's';
          fnam[6] = 'y';
          fnam[7] = 'm';
          fnam[8] = 'm';
       }
-      else if (mmp->blask == 3)
+      else if (mmp->blask == ATL_KSYRK)
+      {
+         fnam[5] = 's';
+         fnam[6] = 'y';
+         fnam[7] = 'r';
+         fnam[8] = 'k';
+      }
+      else if (mmp->blask == ATL_KTRMM)
       {
          fnam[5] = 't';
          fnam[6] = 'r';
@@ -4104,11 +4331,11 @@ double TimeMMKernel3F
    if (DOTIME)
    {
       char *nm="amm";
-      if (mmp->blask == 1)
+      if (mmp->blask == ATL_KSYRK)
          nm = "syk";
-      else if (mmp->blask == 2)
+      else if (mmp->blask == ATL_KSYMM)
          nm = "sym";
-      else if (mmp->blask == 3)
+      else if (mmp->blask == ATL_KTRSM)
          nm = "trm";
       i = sprintf(ln, "make x%c%stime_pt3f mb=%d nb=%d kb=%d",
                   pre, nm, mb, nb, KB);
@@ -4298,26 +4525,57 @@ double TimeMMKernel
       "res/%cammm%d_%dx%dx%d_%dx%dx%d_%x_v%c%db%d_pf%xx%d_%d.ktim",
               pre, mmp->ID, mb, nb, KB, mmp->mu, mmp->nu, KU, 
               mmp->flag, ch, mmp->vlen, beta, mmp->pref, mmp->pfLS, cflush);
-      if (mmp->blask == 1)
+      switch(mmp->blask)
       {
+      case ATL_KSYRK:
          fnam[5] = 's';
          fnam[6] = 'y';
          fnam[7] = 'r';
          fnam[8] = 'k';
-      }
-      else if (mmp->blask == 2)
-      {
+         break;
+      case ATL_KSYMM:
          fnam[5] = 's';
          fnam[6] = 'y';
          fnam[7] = 'm';
          fnam[8] = 'm';
-      }
-      else if (mmp->blask == 3)
-      {
+         break;
+      case ATL_KTRSM:
+         fnam[5] = 't';
+         fnam[6] = 'r';
+         fnam[7] = 's';
+         fnam[8] = 'm';
+         break;
+      case ATL_KTRMM:
          fnam[5] = 't';
          fnam[6] = 'r';
          fnam[7] = 'm';
          fnam[8] = 'm';
+         break;
+      case ATL_KGECPFA:
+         fnam[5] = 'c';
+         fnam[6] = 'p';
+         fnam[7] = 'F';
+         fnam[8] = 'A';
+         break;
+      case ATL_KGECP2A:
+         fnam[5] = 'c';
+         fnam[6] = 'p';
+         fnam[7] = '2';
+         fnam[8] = 'A';
+         break;
+      case ATL_KGECPFC:
+         fnam[5] = 'c';
+         fnam[6] = 'p';
+         fnam[7] = '2';
+         fnam[8] = 'C';
+         break;
+      case ATL_KGECP2C:
+         fnam[5] = 'c';
+         fnam[6] = 'p';
+         fnam[7] = 'F';
+         fnam[8] = 'C';
+         break;
+      default: ;
       }
    }
 /* 
@@ -4329,22 +4587,47 @@ double TimeMMKernel
    if (DOTIME)
    {
       char *nm="amm";
-      if (mmp->blask == 1)
+      if (mmp->blask == ATL_KSYRK)
          nm = "syk";
-      else if (mmp->blask == 2)
+      else if (mmp->blask == ATL_KSYMM)
          nm = "sym";
-      else if (mmp->blask == 3)
+      else if (mmp->blask == ATL_KTRSM)
+         nm = "trs";
+      else if (mmp->blask == ATL_KTRMM)
          nm = "trm";
-      i = sprintf(ln, "make x%c%stime_pt mb=%d nb=%d kb=%d",
-                  pre, nm, mb, nb, KB);
+      ch = (pre == 'c' || pre == 's') ? 'S' : 'D';
+      if (mmp->blask >= ATL_KGECPFA && mmp->blask <= ATL_KGECP2C)
+      {
+         if (mmp->blask < ATL_KGECPFC)
+            i = sprintf(ln, "make %ccpytime mb=%d nb=%d TA=%c", pre, mb, nb, 
+                        mmp->TA == AtlasTrans ? 'T' : 'N');
+         else
+            i = sprintf(ln, "make %ccpytimeC mb=%d nb=%d TA=N", pre, mb, nb);
+         if (mmp->TB == AtlasTrans) /* time row-wise access */
+            i += sprintf(ln+i, " MTDX='-D 8000 8000 8000 1'");
+         i += sprintf(ln+i, " kfnam=%s", mmp->rout);
+         if (mmp->comp)
+            i += sprintf(ln+i, " %cKC=\"%s\"", ch, mmp->comp);
+         if (mmp->cflags)
+            i += sprintf(ln+i, " %cKCFLAGS=\"%s\"", ch, mmp->cflags);
+      }
+      else
+      {
+         i = sprintf(ln, "make x%c%stime_pt mb=%d nb=%d kb=%d",
+                     pre, nm, mb, nb, KB);
+         if (mmp->genstr)
+            i += sprintf(ln+i, " mmrout=%s", mmp->rout);
+         else
+            i += sprintf(ln+i, " mmrout=AMMCASES/%s", mmp->rout);
+         if (mmp->comp)
+            i += sprintf(ln+i, " %cMC=\"%s\"", ch, mmp->comp);
+         if (mmp->cflags)
+            i += sprintf(ln+i, " %cMCFLAGS=\"%s\"", ch, mmp->cflags);
+      }
       if (mflop)
          i += sprintf(ln+i, " FMFS=\"-Rf %d\"", mflop);
       if (SERIAL)
          i += sprintf(ln+i, " NPROC=1");
-      if (mmp->genstr)
-         i += sprintf(ln+i, " mmrout=%s", mmp->rout);
-      else
-         i += sprintf(ln+i, " mmrout=AMMCASES/%s", mmp->rout);
       i += sprintf(ln+i, " mu=%d nu=%d ku=%d", mmp->mu, mmp->nu, KU);
    @whiledef iv szA szB szC szExtra vlen
     if (mmp->@(iv))
@@ -4371,11 +4654,6 @@ double TimeMMKernel
          i += sprintf(ln+i, " beta=%d", beta);
       else
          i += sprintf(ln+i, " beta=-1 betan=\"N1\"");
-      ch = (pre == 'c' || pre == 's') ? 'S' : 'D';
-      if (mmp->comp)
-         i += sprintf(ln+i, " %cMC=\"%s\"", ch, mmp->comp);
-      if (mmp->cflags)
-         i += sprintf(ln+i, " %cMCFLAGS=\"%s\"", ch, mmp->cflags);
       i += sprintf(ln+i, " outF=\"-f %s\"", fnam);
    }
    if (FORCETIME || !FileExists(fnam))
@@ -5864,7 +6142,7 @@ void PrintIntArrAtOff
    {
       char *nxt;
       nxt = GetStrAtOff(cp, nxtoff);
-      fprintf(fp, "%8d%c  /* IDX=%d */\n", *((int*)(cp+ioff)), nxt?',':' ', i);
+      fprintf(fp, "%8d%c  /* CNT=%d */\n", *((int*)(cp+ioff)), nxt?',':' ', i);
       cp = nxt;
    }
    fprintf(fp, "};\n#endif\n\n");

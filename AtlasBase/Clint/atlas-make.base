@@ -274,6 +274,7 @@ startup : lib include results EXtest
 	cd tune/blas/ger ; ln -s $(SRCdir)/tune/blas/ger/R1CASES R1CASES
 	cd tune/blas/ger ; ln -s $(SRCdir)/tune/blas/ger/R2CASES R2CASES
 	cd tune/blas/gemm ; ln -s $(SRCdir)/tune/blas/gemm/AMMCASES AMMCASES
+	cd tune/blas/gemm ; ln -s $(SRCdir)/tune/blas/gemm/CPYCASES CPYCASES
 @whiledef rt gemm gemv
 	cd tune/blas/@(rt) ; ln -s $(SRCdir)/tune/blas/@(rt)/CASES CASES
 @endwhile
@@ -385,6 +386,8 @@ include:
 @endwhile
 	touch include/atlas_tsumm.h
 	touch include/atlas_taffinity.h
+	touch include/atlas_tsched_time.h
+	touch include/atlas_tsched_dly.h
 	$(MAKE) -f Make.top include/atlas_tperf.h
 	touch include/atlas_tperf.h
 	touch include/atlas_ssyrNX.h
@@ -919,6 +922,28 @@ MakeThreadSum :
 perff = $(INCAdir)/atlas_tperf.h
 res/thrbeg.h : 
 	$(MAKE) iTune_startup
+res/sdly.tim: xstune_sched
+	$(ATLRUN) $(myBLDdir) xstune_sched
+MakeSched : 
+	$(MAKE) $(INCAdir)/atlas_tsched_time.h
+$(INCAdir)/atlas_tsched_time.h: res/sdly.tim
+	rm -f $(INCAdir)/atlas_tsched_dly.h $(INCAdir)/atlas_tsched_time.h
+	echo "/* created make MakeSched in thread/tune */" > \
+              $(INCAdir)/atlas_tsched_dly.h
+	echo "#ifndef ATLAS_TSCHED_DLY_H" >> $(INCAdir)/atlas_tsched_dly.h
+	echo "   #define ATLAS_TSCHED_DLY_H " >> $(INCAdir)/atlas_tsched_dly.h
+	cat res/sdly.tim >> $(INCAdir)/atlas_tsched_dly.h
+	echo "#endif" >> $(INCAdir)/atlas_tsched_dly.h
+	echo "/* created make MakeSched in thread/tune */" > \
+              $(INCAdir)/atlas_tsched_time.h
+	echo "#ifndef ATLAS_TSCHED_TIME_H" >> $(INCAdir)/atlas_tsched_time.h
+	echo "   #define ATLAS_TSCHED_TIME_H " >> $(INCAdir)/atlas_tsched_time.h
+	cat res/smut.tim >> $(INCAdir)/atlas_tsched_time.h
+	cat res/slac.tim >> $(INCAdir)/atlas_tsched_time.h
+	cat res/spub.tim >> $(INCAdir)/atlas_tsched_time.h
+	cat res/smix.tim >> $(INCAdir)/atlas_tsched_time.h
+	cat res/sprv.tim >> $(INCAdir)/atlas_tsched_time.h
+	echo "#endif" >> $(INCAdir)/atlas_tsched_time.h
 MakeThreadPerf: res/thrbeg.h
 	- rm -f $(perff)
 	echo "/* created make MakeThreadPerf in thread/tune */" > $(perff)
@@ -1062,6 +1087,14 @@ x@(rt) : @(rt).o tlib
 @whiledef rt count cntdly
 xtune_@(rt) : tune_@(rt).o tlib mutcnt
 	$(CC) $(CCFLAGS) -o $@ tune_@(rt).o $(mut_cnt) $(ATLASlib) $(LIBS)
+@endwhile
+@multidef typ SREAL DREAL SCPLX DCPLX
+@whiledef pre s d c z
+x@(pre)tune_sched: $(mySRCdir)/tune_cntdly.c
+	$(MAKE) mutcnt
+	$(CC) $(CCFLAGS) -o $@ -DATL_USE_PERF_H -D@(typ) \
+              $(mySRCdir)/tune_cntdly.c $(mut_cnt) $(ATLASlib) $(LIBS)
+   @undef typ
 @endwhile
 xtest_lock_mut : $(mySRCdir)/test_lock.c $(INCSdir)/atlas_tprim.h \
         $(myTHRdir)/ATL_lock_mut.c $(myTHRdir)/ATL_unlock_mut.c
@@ -2334,6 +2367,7 @@ csC = 1
 alpha = 1
 beta = 1
 betan=$(beta)
+alphan=$(alpha)
 loopO = JIK
 F0 = 16
 FN = 0
@@ -2357,6 +2391,7 @@ outF=
 bcast=1
 vlen=1
 cpvlen=1
+knam=ATL_USERCPMM
 @whiledef iv szExtra
 @(iv)=0
 @endwhile
@@ -2394,6 +2429,14 @@ x@(rout) : $(INCAdir)/atlas_type.h @(rout).o @(dep) $(parsedeps)
   @undef dep
 @endwhile
 @ENDSKIP
+
+help :
+	@@echo "flags for amm kerns preMCFLAGS='', else preKCFLAGS=''\n"
+	@@echo "make PREcpytime kfnam=FILENAME mu=X nu=X knam=ROUTINE_NAME ta=[N,T] betan=[X,1,n]"
+	@@echo "-->can take MTXD '-D M lda N COLWISE'\n"
+	@@echo "make xPREammtime_pt mmrout=FILENAME mu=X nu=X ku=X mb=X nb=X kb=X M=X N=X K=X\n"
+	@@echo "make PREammmtst mu=X nu=X M=X N=X K=X mmrout=<FILE>\n"
+	@@echo "make gen_amm_[sse,avx,gvec,scalar] mu=X nu=X vlen=VL kmaj=VL rt=FILE\n"
 
 DoSzBlk :
 	rm -f szblk.c xszblk
@@ -2535,7 +2578,7 @@ xemit_amm : $(mySRCdir)/emit_amm.c $(parsedeps)
 	$(XCC) $(XCCFLAGS) -o $@ $(mySRCdir)/emit_amm.c -lm
 xemit_uamm : $(mySRCdir)/emit_uamm.c $(parsedeps)
 	$(XCC) $(XCCFLAGS) -o $@ $(mySRCdir)/emit_uamm.c -lm
-@whiledef rt ammsearch uammsearch gmmsearch uammsrch
+@whiledef rt ammsearch uammsearch gmmsearch uammsrch cpysearch
 x@(rt) : $(mySRCdir)/@(rt).c $(parsedeps)
 	$(XCC) $(XCCFLAGS) -o $@ $(mySRCdir)/@(rt).c -lm
 @endwhile
@@ -2945,6 +2988,11 @@ x@(pre)nbtune : @(pre)nbtune.o @(pre)ammlib
 @(pre)trstime_pt.o : $(mySRCdir)/mmtime_pt.c
 	$(KC) $(KCFLAGS) -c -DTIME_TRMVK=1 -D@(typ)=1 \
               -o @(pre)trstime_pt.o $(mySRCdir)/mmtime_pt.c
+@(pre)trsmKtime : x@(pre)trstime_pt
+	$(ATLRUN) $(MMTdir) x@(pre)trstime_pt -p $(NPROC) $(TIDLIST) \
+           -m $(mb) -n $(nb) -k $(mb) -um 1 -un 1 -uk 1 $(FMFS) \
+           -Ma 0 -Mb 0 -Mc 1 $(outF)
+
 @(pre)trstime_pt3f.o : $(mySRCdir)/mmtime_pt3f.c
 	$(KC) $(KCFLAGS) -c -DTIME_TRMVK=1 -D@(typ)=1 $(TDEFS) \
               -o @(pre)trstime_pt3f.o $(mySRCdir)/mmtime_pt3f.c
@@ -2956,13 +3004,33 @@ x@(pre)nbtune : @(pre)nbtune.o @(pre)ammlib
 $(L3Bdir)/kernel/@(trsm) :
 	cd $(L3Bdir)/kernel ; make @(trsm)
 @ptyp !
+@(pre)cpytimeC : 
+	$(KC) $(KCFLAGS) -c -DBETA${betan}=1 -D@(typ)=1 -DTIME_COPY -DCOPY_C \
+           -DCOPYK=$(knam) -o @(pre)cpytimeC_pt${bn}.o $(mySRCdir)/mmtime_pt.c
+	$(@up@(pre)KC) $(@up@(pre)KCFLAGS) $(CDEFS) -D@(typ)=1 -DBETA${betan}=1 \
+           -DALPHA${alphan}=1 -DATL_MU=$(mu) -DATL_NU=$(nu) \
+           -o @(pre)cpykern.o -c $(kfnam)
+	$(CLINKER) $(CLINKFLAGS) -o x@(pre)cpytimeC_pt @(pre)cpytimeC_pt${bn}.o \
+           @(pre)cpykern.o $(SYSdir)/time.o $(LIBS)
+	$(ATLRUN) $(MMTdir) x@(pre)cpytimeC_pt -p $(NPROC) $(TIDLIST) \
+           -m $(mb) -n $(nb) -k $(kb) -um $(mu) -un $(nu) -uk $(ku) $(FMFS) \
+           -V $(vlen) -Ma $(mvA) -Mb $(mvB) -Mc $(mvC) $(outF) $(MTXD)
+
+@(pre)cpytime : 
+	$(KC) $(KCFLAGS) -c -DBETA${betan}=1 -D@(typ)=1 -DTIME_COPY \
+           -DCOPYK=$(knam) -o @(pre)cpytime_pt${bn}.o $(mySRCdir)/mmtime_pt.c
+	$(@up@(pre)KC) $(@up@(pre)KCFLAGS) $(CDEFS) -D@(typ)=1 -DBETA${betan}=1 \
+           -DTRANS$(ta)_=1 -DALPHA${betan}=1 -DATL_MU=$(mu) -DATL_NU=$(nu) \
+           -o @(pre)cpykern.o -c $(kfnam)
+	$(CLINKER) $(CLINKFLAGS) -o x@(pre)cpytime_pt @(pre)cpytime_pt${bn}.o \
+           @(pre)cpykern.o $(SYSdir)/time.o $(LIBS)
+	$(ATLRUN) $(MMTdir) x@(pre)cpytime_pt -p $(NPROC) $(TIDLIST) \
+           -m $(mb) -n $(nb) -k $(kb) -um $(mu) -un $(nu) -uk $(ku) $(FMFS) \
+           -V $(vlen) -Ma $(mvA) -Mb $(mvB) -Mc $(mvC) $(outF) $(MTXD)
+
 x@(pre)trstime_pt : @(pre)trstime_pt.o $(L3Bdir)/kernel/@(trsm)
-	$(CLINKER) $(CLINKFLAGS) -o x@(pre)trstime_pt @(pre)trstime_pt.o \
-           $(SYSdir)/time.o $(L3Bdir)/kernel/@(trsm) $(ATLASlib) $(LIBS)
-@(pre)trsmKtime : x@(pre)trstime_pt
-	$(ATLRUN) $(MMTdir) x@(pre)trstime_pt -p $(NPROC) $(TIDLIST) \
-           -m $(mb) -n $(nb) -k $(mb) -um 1 -un 1 -uk 1 $(FMFS) \
-           -Ma 0 -Mb 0 -Mc 1 $(outF)
+	$(CLINKER) $(CLINKFLAGS) -o $@ @(pre)trstime_pt.o \
+         $(SYSdir)/time.o $(L3Bdir)/kernel/@(trsm) $(ATLASlib) $(LIBS)
 x@(pre)trstime_pt3f : @(pre)trstime_pt3f.o $(L3Bdir)/kernel/@(trsm)
 	$(CLINKER) $(CLINKFLAGS) -o $@ @(pre)trstime_pt3f.o \
          $(SYSdir)/time.o $(L3Bdir)/kernel/@(trsm) $(ATLASlib) $(LIBS)
@@ -7482,6 +7550,10 @@ dep = $(INCSdir)/atlas_misc.h $(INCAdir)/atlas_pthreads.h \
    ATL_atmctr_set_asm.o ATL_atmctr_set_mut.o
    ATL_atmctr_dec_asm.o ATL_atmctr_dec_mut.o
    ATL_atmctr_add_asm.o ATL_atmctr_add_mut.o
+   ATL_GetSchedDelayIdx.o
+   @whiledef sy mut lac pub mix prv
+      ATL_GetSchedTime_@(sy).o
+   @endwhile
 @enddeclare
 
 all : lib
@@ -7569,7 +7641,14 @@ ATL_atmctr_@(rt)_mut_mut.o : $(dep) $(INCSdir)/atlas_atmctr.h \
               -DATL_atmctr_@(rt)=ATL_atmctr_@(rt)_mut \
               -c $(mySRCdir)/ATL_atmctr_@(rt)_mut.c
 @endwhile
+ATL_GetSchedDelayIdx.o : $(dep) $(INCAdir)/atlas_tsched_dly.h
+	$(KC) $(KCFLAGS) -o $@ -c $(mySRCdir)/ATL_GetSchedDelayIdx.c
 
+@whiledef sy mut lac pub mix prv
+ATL_GetSchedTime_@(sy).o : $(dep) $(INCAdir)/atlas_tsched_time.h \
+                           $(mySRCdir)/ATL_GetSchedTime.c
+	$(KC) $(KCFLAGS) -o $@ -DATL_@up@(sy) -c $(mySRCdir)/ATL_GetSchedTime.c
+@endwhile
 @skip ATL_gccstackfix.o : $(mySRCdir)/ATL_gccstackfix.S
 @skip 	$(GOODGCC) $(CDEFS) -m32 -o $@ -c $(mySRCdir)/ATL_gccstackfix.S
 @ROUT Make.l2thr

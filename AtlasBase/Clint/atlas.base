@@ -36114,7 +36114,8 @@ double *TimeOnCores(struct kmm_struct *kb)
       kp[i].iam = i;
       CPU_ZERO(cpuset);
       CPU_SET(kp->pids[i], cpuset);
-      assert(!pthread_attr_setaffinity_np(attr+i, sizeof(cpuset), cpuset));
+      assert(!pthread_attr_init(attr+i));
+      assert(!pthread_attr_setaffinity_np(attr+i, sizeof(cpu_set_t), cpuset));
       assert(!pthread_attr_setdetachstate(attr+i, PTHREAD_CREATE_JOINABLE));
       assert(!pthread_create(threads+i, attr+i, TimeOnCore, kp+i));
    }
@@ -36123,6 +36124,7 @@ double *TimeOnCores(struct kmm_struct *kb)
       pthread_join(threads[i], NULL);
       mflops[i] = kp[i].mf;
    }
+   free(cpuset);
    free(kp->pids);
    free(kp);
    free(threads);
@@ -36498,6 +36500,27 @@ int main(int nargs, char **args)
           const TYPE *T, TYPE *B, ATL_CINT ldb, TYPE *W);
       #endif
    #endif
+#elif defined(TIME_COPY)
+   #ifndef COPYK
+      #define COPYK ATL_USERCPMM
+   #endif
+   #ifdef TREAL
+      #ifdef COPY_C
+         void COPYK(const size_t, const size_t, const TYPE, const TYPE*, 
+                    const TYPE, TYPE*, const size_t);
+      #else
+         void COPYK(const size_t, const size_t, const TYPE,
+                    const TYPE*, const size_t, TYPE*);
+      #endif
+   #else
+      #ifdef COPY_C
+         void COPYK(const size_t, const size_t, const TYPE*, const TYPE*, 
+                    const TYPE*, const TYPE*, TYPE *, const size_t);
+      #else
+         void COPYK(const size_t, const size_t, const TYPE*,
+                    const TYPE*, const size_t, TYPE*, TYPE*);
+      #endif
+   #endif
 #elif defined(TCPLX)
    size_t rszA, rszB, rszC;
    void CAMM_b0(ATL_CSZT mblks, ATL_CSZT nblks, ATL_CSZT K, const TYPE *A,
@@ -36580,6 +36603,11 @@ int main(int nargs, char **args)
 #endif
 
 struct kmm_struct{
+   #ifdef TIME_COPY
+      TYPE *A;
+      size_t nmblks, nnblks, lda;
+      int COLWISE, BM, BN;
+   #endif
    int mb, nb, kb;                      /* C: mbxnb, At: kbxmb, B: kbXnb */
    int mu, nu, ku;                      /* needed to compute mblks/nblks */
    int movA, movB, movC;                /* which mat move in flush array? */
@@ -36593,12 +36621,18 @@ struct kmm_struct{
    volatile unsigned char *chkin;       /* P-len array to signal start/done */
 };
 
+#ifdef TIME_COPY
+static double getMflops(double m, double n)
+#else
 static double getMflops(double m, double n, double k)
+#endif
 {
    #ifdef TIME_TRMVK
      return(1e-6*m*m*n);
    #elif defined(TIME_SYRKK)
       return(1e-6*n*(n+1)*k);
+   #elif defined(TIME_COPY)
+      return(1e-6*m*n);
    #else
       return(1e-6*2.0*m*n*k);
    #endif
@@ -36629,6 +36663,7 @@ double GetKmmMflop
    CINT mb, CINT nb, CINT kb,           /* C: mbxnb, At: kbxmb, B: kbXnb */
    CINT mu, CINT nu, CINT ku, CINT vlen,
    int movA, int movB, int movC,        /* which mat move in flush array? */
+   struct kmm_struct *pd,               /* problem definition */   
    size_t FLSIZE,                       /* min area to move in in bytes */
    CINT reps                            /* # calls to kmm in one timing */
 )
@@ -36636,21 +36671,61 @@ double GetKmmMflop
  * Returns MFLOP rate of matmul kernel KMM
  */
 {
-   CINT mblks = mb/mu, nblks = nb/nu;
-   const int NOMOVE = !(movA|movB|movC);
-   size_t szA, szB, szC, extra, setsz, nsets, tsz, i, j, incA, incB, incC, n;
+   void *vp=NULL;
    TYPE *C, *A, *B, *a, *b, *c;
    TYPE *ep, *sp;  /* extra & set ptrs */
    double t0, t1, mf;
+   size_t szA, szB, szC, extra, setsz, nsets, tsz, i, j, incA, incB, incC, n;
+   #ifdef TIME_COPY
+      const size_t lda=pd->lda;
+      size_t INCBLK, INCPAN, II, JJ, NN, MM;
+      unsigned int B0, B1;
+      TYPE *AA=pd->A, *aa;
+      #ifdef TCPLX
+         TYPE alpha[2] = {0.0, 0.0}, *beta = alpha;
+      #else
+         TYPE alpha=0.0, beta=0.0;
+      #endif
+   #else
    const TYPE alpha=1.0;
    TYPE beta=1.0;
-   void *vp=NULL;
+   #endif
+   CINT mblks = mb/mu, nblks = nb/nu;
+   const int NOMOVE = !(movA|movB|movC);
    unsigned int seed = mb*kb + (nb<<14);
+
+   #ifdef TIME_COPY
+      if (pd->COLWISE)
+      {
+         NN = pd->nnblks;
+         MM = pd->nmblks;
+         INCBLK = mb SHIFT;
+         INCPAN = lda*(nb SHIFT); 
+         B0 = mb;
+         B1 = nb;
+      }
+      else
+      {
+         NN = pd->nmblks;
+         MM = pd->nnblks;
+         INCBLK = lda * (nb SHIFT);
+         INCPAN = (mb SHIFT);
+         B0 = nb;
+         B1 = mb;
+      }
+      AA += pd->iam * INCPAN;
+      INCPAN -= INCBLK*MM;
+      II = JJ = 0;
+   #endif
 /*
  * Get size for each matrix, and round up to ensure we keep alignment
  */
-   szA = ATL_getszA(mb, kb, mu, ku, vlen);
-   szB = ATL_getszB(kb, nb, ku, nu, vlen);
+   #ifdef TIME_COPY
+      szA = szB = 0;
+   #else
+      szA = ATL_getszA(mb, kb, mu, ku, vlen);
+      szB = ATL_getszB(kb, nb, ku, nu, vlen);
+   #endif
    szC = ATL_getszC(mb, nb, mu, nu, vlen);
 /*
  * Compute the setsz & extra 
@@ -36732,6 +36807,31 @@ double GetKmmMflop
          Mjoin(PATL,ktrsmLLN_rk4)(mb, nb, 1.0, a, c, mb, B);
       #elif defined(TIME_SYRKK)
          KMM(mblks, nblks, kb, a, a, c, an, an, cn);
+      #elif defined(TIME_COPY)
+         #ifdef COPY_C
+            #ifdef TCPLX
+               COPYK(mb, nb, alpha, c+szC, c, beta, AA, lda);
+            #else
+               COPYK(mb, nb, alpha, c, beta, AA, lda);
+            #endif
+         #else
+            #ifdef TREAL
+               COPYK(B0, B1, alpha, AA, lda, c);
+            #else
+               COPYK(B0, B1, alpha, AA, lda, c+szC, c);
+            #endif
+         #endif
+         aa += INCBLK;
+         if (++II == MM)
+         {
+            II = 0;
+            aa += INCPAN;
+            if (++JJ == NN)
+            {
+               JJ = 0;
+               aa = AA;
+            }
+         }
       #else
          KMM(mblks, nblks, kb, a, b, c, an, bn, cn);
       #endif
@@ -36740,9 +36840,20 @@ double GetKmmMflop
       c = cn;
    }
    t1 = ATL_walltime() - t0;
-   mf = reps*getMflops(mb, nb, kb) / t1;
-   #ifdef TCPLX
-      mf *= 4.0;
+   #ifdef TIME_COPY
+      #ifdef COPY_C
+         mf = reps*getMflops(mb, nb) / t1;
+      #else
+         mf = reps*getMflops(nb, kb) / t1;  /* need to dist mb/nb eventually */
+      #endif
+      #ifdef TCPLX
+         mf *= 2.0;
+      #endif
+   #else
+      mf = reps*getMflops(mb, nb, kb) / t1;
+      #ifdef TCPLX
+         mf *= 4.0;
+      #endif
    #endif
    free(vp);
    return(mf);
@@ -36785,7 +36896,7 @@ void *TimeOnCore(void *vp)
          while(!chkin[i]);
    #endif
    kp->mf = GetKmmMflop(kp->mb, kp->nb, kp->kb, kp->mu, kp->nu, kp->ku, 
-                        kp->vlen, kp->movA, kp->movB, kp->movC, 
+                        kp->vlen, kp->movA, kp->movB, kp->movC, kp, 
                         kp->FLSIZE, kp->reps);
    return(NULL);
 }
@@ -36840,19 +36951,23 @@ double *TimeOnCores(struct kmm_struct *kb)
       kp[i].iam = i;
       CPU_ZERO(cpuset);
       CPU_SET(kp->pids[i], cpuset);
-      assert(!pthread_attr_setaffinity_np(attr+i, sizeof(cpuset), cpuset));
+      assert(!pthread_attr_init(attr+i));
+      assert(!pthread_attr_setaffinity_np(attr+i, sizeof(cpu_set_t), cpuset));
       assert(!pthread_attr_setdetachstate(attr+i, PTHREAD_CREATE_JOINABLE));
       assert(!pthread_create(threads+i, attr+i, TimeOnCore, kp+i));
    }
    for (i=0; i < p; i++)
    {
       pthread_join(threads[i], NULL);
+      pthread_attr_destroy(attr+i);
       mflops[i] = kp[i].mf;
    }
    free(kp->pids);
    free(kp);
    free(threads);
    free(attr);
+   free(cpuset);
+   free(chkin);
    return(mflops);
 }
 #endif
@@ -36885,6 +37000,12 @@ void PrintUsage(char *name, int iarg, char *arg)
    fprintf(stderr, "   -n <#> : nb = #\n");
    fprintf(stderr, "   -k <#> : kb = #\n");
    fprintf(stderr, "   -V <veclen>\n");
+   #ifdef TIME_COPY
+      fprintf(stderr, "   -D <M> <lda> <N> <COLWISE>: copy only\n");
+      #ifndef COPY_C
+      fprintf(stderr, "   -A [a,b]: for A/B copy, set which you are copying\n");
+      #endif
+   #endif
    fprintf(stderr, "   -u[mnk] <#> : M/N/K loop unrolling is #\n");
    fprintf(stderr, "   -r <#> : set the # of times to call KMM\n");
    fprintf(stderr, "   -R <mf>: set # reps to force <mf> MFLOPs\n");
@@ -36899,11 +37020,19 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
    FILE *fp;
    struct kmm_struct *kp;
    double mflops=750.0;
-   int i, j, IGMF=0;  /* ignore mflops.frc file? */
+   int i, j, ACPY=1, IGMF=0;  /* ignore mflops.frc file? */
    
    *fpout = NULL;
    kp = malloc(sizeof(struct kmm_struct));
    assert(kp);
+   #ifdef TIME_COPY
+      kp->nmblks = kp->nnblks = kp->lda = 2000;
+      #ifdef COPY_C
+         kp->COLWISE = 1;
+      #else
+         kp->COLWISE = 0;
+      #endif
+   #endif
    kp->pids = NULL;
    kp->p = 1;
    kp->mb = kp->nb = kp->kb = 40;
@@ -36919,6 +37048,13 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
          PrintUsage(args[0], i, args[i]);
       switch(args[i][1])
       {
+      #if defined(TIME_COPY) && !defined(COPY_C)
+      case 'A':
+         if (++i >= nargs)
+            PrintUsage(args[0], i, "out of arguments");
+         ACPY = (args[i][0] != 'b' && args[i][0] != 'B');
+         break;
+      #endif
       case 'f':
          if (++i >= nargs)
             PrintUsage(args[0], i, "out of arguments");
@@ -36929,6 +37065,17 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
             PrintUsage(args[0], i, "out of arguments");
          kp->vlen = atoi(args[i]);
          break;
+      #ifdef TIME_COPY
+      case 'D':  /* -D <M> <lda> <N> <COL> */
+         if (i+4 >= nargs)
+            PrintUsage(args[0], i, "out of arguments");
+         kp->nmblks = atol(args[i+1]);
+         kp->lda = atol(args[i+2]);
+         kp->nnblks = atol(args[i+3]);
+         kp->COLWISE = atoi(args[i+4]);
+         i += 4;
+         break;
+      #endif
       case 'F':
          if (++i >= nargs)
             PrintUsage(args[0], i, "out of arguments");
@@ -37079,6 +37226,39 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
              kp->pids[j] = j;
       #endif
    }
+   #ifdef TIME_COPY  /* Reduce M/N to nmblks, nnblks, handle P */
+   {
+      const size_t gap = kp->lda - kp->nmblks;
+      unsigned int nb;
+
+      #ifdef TIME_C
+      if (ACPY)
+      {
+         kp->BM = kp->mb;
+         kp->BN = kp->kb;
+      }
+      else
+      {
+         kp->BM = kp->kb;
+         kp->BN = kp->nb;
+      }
+      #else
+         kp->BM = kp->mb;
+         kp->BN = kp->nb;
+      #endif
+      nb = kp->BM;
+      kp->nmblks = (kp->nmblks+nb-1)/nb;
+      if (!kp->COLWISE)
+         kp->nmblks = (kp->nmblks >= kp->p) ? kp->nmblks : kp->p;
+      kp->lda = kp->nmblks*nb + gap;
+      nb = kp->BN;
+      kp->nnblks = (kp->nnblks+nb-1)/nb;
+      if (kp->COLWISE)
+         kp->nnblks = (kp->nnblks >= kp->p) ? kp->nnblks : kp->p;
+      kp->movA = kp->movB = 0;
+      kp->movC = 1;
+   }
+   #endif
    #ifdef TIME_SYRKK
       kp->movB = 0;
    #endif
@@ -37097,6 +37277,20 @@ int main(int nargs, char **args)
    p = kp->p;
    #ifndef ATL_NCPU
       assert(p < 2);
+   #endif
+   #ifdef TIME_COPY
+   {
+      TYPE *A;
+      size_t k, N;
+      unsigned int seed;
+
+      N = kp->lda * kp->nnblks * kp->nb;
+      seed = kp->lda+(kp->nnblks<<8);
+      kp->A = A = malloc(ATL_MulBySize(N));
+      assert(A);
+      for (k=0; k < N; k++)
+         A[k] = dumb_prand(&seed);
+   }
    #endif
    dp = TimeOnCores(kp);
    free(kp);
