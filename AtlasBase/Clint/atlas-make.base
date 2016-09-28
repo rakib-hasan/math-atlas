@@ -631,8 +631,10 @@ sumd :
 
 @beginproc tdef nm
    @multidef @(nm)
-      bcLaswp_amm getrf_bcAmm_info
-      getrf_bcAmm bcL2G_blkcpy bcAblk2cmat bcRm2am bcG2L_cpy bcL2G_cpy bcAm2rm
+      bcLaswp_amm 
+      @skip getrf_bcAmm_info
+      @skip getrf_bcAmm 
+      bcL2G_blkcpy bcAblk2cmat bcRm2am bcG2L_cpy bcL2G_cpy bcAm2rm
    @endmultidef
 @endproc
 
@@ -646,7 +648,7 @@ deps = $(INCSdir)/atlas_lapack.h $(INCSdir)/atlas_pca.h
 
 @multidef upr d s d s
 @whiledef pre z c d s
-@(pre)deps = $(INCAdir)/atlas_@(pre)u0amm_cmat2ablk.h sumd/@(upr)uAMMFRC.sum 
+@(pre)deps = $(INCAdir)/atlas_@(pre)u0amm_cmat2ablk.h sumd/@(upr)uAMMRES.sum 
    @callproc tdef rt
    @declare "@(pre)obj = " y y
       @whiledef rt
@@ -658,11 +660,16 @@ deps = $(INCSdir)/atlas_lapack.h $(INCSdir)/atlas_pca.h
 @endwhile
 @whiledef upr X d s d s
 @whiledef pre i z c d s
+   @mif pre ! "i
+@(pre)lib : ilib
+   @endmif
+   @mif pre = "i
 @(pre)lib : 
+   @endmif
 	cd $(BLDdir)/src/threads/cbc2d ; $(PMAKE) lib
    @mif pre ! "i
 	$(MAKE) sumd
-	$(MAKE) sumd/@(pre)uAMMFRC.sum
+	$(MAKE) sumd/@(pre)uAMMRES.sum
    @endmif
 	$(PMAKE) @(pre)lib.grd
 @(pre)lib.grd : $(@(pre)deps) $(@(pre)obj)
@@ -679,12 +686,12 @@ ATL_@(irt1).o : $(deps) $(mySRCdir)/ATL_@(irt1).c
 	$(KC) $(KCFLAGS) -I./ -o $@ -c $(mySRCdir)/ATL_@(irt1).c
 @endwhile
 
-$(INCAdir)/atlas_du0amm_cmat2ablk.h : sumd/duAMMFRC.sum
-$(INCAdir)/atlas_su0amm_cmat2ablk.h : sumd/suAMMFRC.sum
-$(INCAdir)/atlas_cu0amm_cmat2ablk.h : sumd/cuAMMFRC.sum
-$(INCAdir)/atlas_zu0amm_cmat2ablk.h : sumd/zuAMMFRC.sum
+$(INCAdir)/atlas_du0amm_cmat2ablk.h : sumd/duAMMRES.sum
+$(INCAdir)/atlas_su0amm_cmat2ablk.h : sumd/suAMMRES.sum
+$(INCAdir)/atlas_cu0amm_cmat2ablk.h : sumd/cuAMMRES.sum
+$(INCAdir)/atlas_zu0amm_cmat2ablk.h : sumd/zuAMMRES.sum
 @beginskip
-   @whiledef rt uAMMFRC UMMKCLEANBYNB UMMKCLEAN
+   @whiledef rt uAMMRES UMMKCLEANBYNB UMMKCLEAN
 sumd/s@(rt).sum :
 	$(MAKE) sumd
 	cd $(MMTdir) ; make suamm_getrf
@@ -695,7 +702,7 @@ sumd/d@(rt).sum :
 @endskip
 @multidef typ DCPLX SCPLX DREAL SREAL
 @whiledef pre z c d s
-sumd/@(pre)uAMMFRC.sum : 
+sumd/@(pre)uAMMRES.sum : 
 	$(MAKE) sumd
 	cd $(MMTdir) ; make @(pre)uamm_getrf
    @callproc tdef rt
@@ -2721,6 +2728,7 @@ xvmmf_gccsub : $(mySRCdir)/vmmf_gccsub.c
 
 @multidef upr d s d s
 @multidef typ DCPLX SCPLX DREAL SREAL
+@multidef xpr d s z c
 @whiledef pre z c d s
    @addkeys ptyp=@(pre)
 @BEGINSKIP
@@ -2759,10 +2767,11 @@ res/@(pre)@(rt) : xgmmsearch
 	cp $(usaved)/@(pre)uAMMFRC.sum res/.
 	cp $(usaved)/@(pre)UMMKCLEAN.sum res/.
 	cp $(usaved)/@(pre)UMMKCLEANBYNB.sum res/.
-@(pre)uamm_getrf : xuammsearch $(BLDdir)/src/threads/lapack/amm/sumd
-	./xuammsearch -p @(pre) -b $(NRF) -M 2 a c -T 1.01 -K 0
+@(pre)uamm_getrf : xuammsrch $(BLDdir)/src/threads/lapack/amm/sumd
+	./xuammsrch -p @(pre) -S $(NRF) -F 2 a c -T 1.01
+	./xuammsrch -p @(xpr) -S $(NRF) -F 2 a c -T 1.01
 	make @(pre)install_uamm_noclean ID=0
-	cp res/@(pre)uAMMFRC.sum $(BLDdir)/src/threads/lapack/amm/sumd/.
+	cp res/@(pre)uAMMRES.sum $(BLDdir)/src/threads/lapack/amm/sumd/.
 
 @beginskip
 @(pre)install_uamm: res/@(pre)uAMMFRC.sum res/@(pre)UMMKCLEAN.sum \
@@ -2862,6 +2871,7 @@ res/atlas_@(pre)amm_sum.h :
 
    @undef typ
    @undef upr
+   @undef xpr
 @endwhile
 
 @multidef typ DCPLX SCPLX

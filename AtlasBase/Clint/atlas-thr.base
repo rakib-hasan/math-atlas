@@ -8734,6 +8734,7 @@ void ATL_bcIpivDecode
 @ROUT ATL_bcLaswp_amm
 @extract -b @(topd)/cw.inc lang=c -define cwdate 2015
 #include "atlas_misc.h"
+#include "atlas_level1.h"
 #include "atlas_pca.h"
 #include "atlas_bcamm.h"
 void Mjoin(PATL,bcLaswp_amm)
