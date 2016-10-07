@@ -2337,7 +2337,8 @@ $(INCAdir)/$(pre)mv.h: xemitmv
 L3INCdep = $(INCSdir)/atlas_misc.h $(INCSdir)/atlas_lvl3.h \
            $(INCSdir)/atlas_f77.h $(INCAdir)/atlas_type.h
 parsedeps = $(INCSdir)/atlas_mmparse.h $(INCSdir)/atlas_mmtesttime.h \
-            $(INCSdir)/atlas_genparse.h $(INCSdir)/atlas_gentesttime.h
+            $(INCSdir)/atlas_genparse.h $(INCSdir)/atlas_gentesttime.h \
+            $(INCSdir)/atlas_mmgen.h $(INCSdir)/atlas_cpparse.h
 basf = $(mySRCdir)/atlas-mmg.base
 fkob = $(mySRCdir)/ammm_fko.B
 extC = $(BINdir)/xextract -b $(basf) -langC
@@ -2455,7 +2456,7 @@ cpyhelp :
 	@@echo "make gen_[sy,]C2blk rt= pre= vlen= mu= nu= cpvlen= beta= alpha="
 	@@echo "make gen_A[T,N]2blk rt= kmaj= UR= alpha="
 	@@echo "make gen_A[T,N]2blk rt= kmaj= UR= alpha="
-        @@echo "make gen_cA[T,N]2blk rt= kmaj= UR= alpha= rout=FUNCNM"
+	@@echo "make gen_cA[T,N]2blk rt= kmaj= UR= alpha= rout=FUNCNM"
 DoSzBlk :
 	rm -f szblk.c xszblk
 	echo "int getsz(int M, int N, int mu, int nu, int vlen)" > szblk.c
@@ -2478,6 +2479,15 @@ res/goodgcc.txt :
 	echo "'$(GOODGCC)'" > res/goodgcc.txt
 $(BINdir)/xextract :
 	cd $(BINdir) ; $(MAKE) xextract
+
+@whiledef vv avx sse
+   @whiledef rt blk2C C2blk
+@(rt)_@(vv) : $(basf) force_build
+	$(extC) -def mu "${mu}" -def nu "${nu}" -def alpha "${alpha}" \
+                -def beta "${beta}" rout=@(rt)_@(vv) -o $(rt)
+   @endwhile
+@endwhile
+
 @whiledef pre z c
    @whiledef rt am2cm am2rm cm2am rm2am
 ATL_@(pre)@(rt)_a$(al)_$(UR).c : $(basf) force_build
@@ -2588,6 +2598,8 @@ ATL_@(pre)cmat2ablk_${mu}x${nu}_a$(al)_b$(be).c : $(basf) force_build
 @endwhile
 xprefparse : $(mySRCdir)/prefparse.c $(parsedeps)
 	$(XCC) $(XCCFLAGS) -o $@ $(mySRCdir)/prefparse.c
+xcpcgen :  $(mySRCdir)/cpcgen.c $(parsedeps) $(INCSdir)/atlas_mmgen.h
+	$(XCC) $(XCCFLAGS) -o $@ $(mySRCdir)/cpcgen.c -lm
 xammgen :  $(mySRCdir)/ammgen.c $(parsedeps) $(INCSdir)/atlas_mmgen.h
 	$(XCC) $(XCCFLAGS) -o $@ $(mySRCdir)/ammgen.c -lm
 xuammgen :  $(mySRCdir)/uammgen.c $(parsedeps) $(INCSdir)/atlas_mmgen.h
