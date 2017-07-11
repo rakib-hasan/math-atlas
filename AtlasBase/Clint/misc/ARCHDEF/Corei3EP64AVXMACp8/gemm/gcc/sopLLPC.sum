@@ -1,0 +1,480 @@
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=33 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.265481e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=34 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.391176e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=35 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.469550e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=36 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.597252e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=220 KB=37 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.620630e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=38 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.757002e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=208 KB=39 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.798826e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=208 KB=40 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.921873e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=41 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-4.961008e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=42 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.082008e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=43 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.094848e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=44 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.213333e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=45 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.233231e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=46 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.349525e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=47 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.372536e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=48 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.486845e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=49 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.485301e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=50 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.597473e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=51 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.592486e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=52 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.702143e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=53 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.702668e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=54 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.810265e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=216 KB=55 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.788298e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=56 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.905719e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=57 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.915012e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=58 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.018785e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=168 KB=59 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-5.974392e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=60 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.079418e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=196 KB=61 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.076869e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=196 KB=62 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.176490e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=63 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.142866e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=64 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.231979e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=168 KB=65 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.210318e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=168 KB=66 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.305862e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=67 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.287092e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=68 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.380929e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=69 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.290855e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=70 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.382026e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=168 KB=71 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.332212e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=72 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.433174e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=73 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.405135e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=168 KB=74 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.478445e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=144 KB=75 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.455359e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=144 KB=76 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.541431e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=168 KB=77 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.502545e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=168 KB=78 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.586994e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=176 KB=79 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.577968e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=176 KB=80 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.661233e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=168 KB=81 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.599066e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=82 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.703505e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=168 KB=83 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.670108e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=84 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.755711e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=85 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.716204e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=86 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.795218e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=192 KB=87 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.777056e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=192 KB=88 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.854953e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=89 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.800179e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=90 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.876586e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=91 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.828673e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=216 KB=92 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.903713e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=93 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.873444e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=94 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.947352e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=192 NB=168 KB=95 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.899885e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=192 NB=168 KB=96 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.972515e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=97 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.921783e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=192 KB=98 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.993142e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=99 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.998812e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=100 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.069507e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=101 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-6.998843e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=96 NB=240 KB=102 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.051230e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=288 KB=103 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.087073e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=288 KB=104 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.155879e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=105 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.083625e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=106 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.151088e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=216 KB=107 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.075763e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=108 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.171235e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=216 KB=109 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.137366e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=216 KB=110 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.202846e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=111 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.173541e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=112 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.238167e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=113 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.196956e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=240 KB=114 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.226777e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=192 NB=216 KB=115 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.213949e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=192 NB=216 KB=116 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.276679e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=117 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.248009e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=118 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.309957e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=119 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.253053e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=120 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.279415e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=72 NB=240 KB=121 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.288394e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=72 NB=240 KB=122 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.348629e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=123 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.310220e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=124 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.349648e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=125 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.373894e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=240 KB=126 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.432886e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=312 KB=127 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.428208e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=13 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=312 KB=128 AOUTER=1 KRUNTIME=1  \
+   LDCTOP=1  \
+   MFLOP=-7.486698e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'

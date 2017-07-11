@@ -22,7 +22,7 @@ void AddLoopControl(LOOPQ *lp, INSTQ *ipinit, INSTQ *ipupdate, INSTQ *ippost,
 void KillLoopControl(LOOPQ *lp);
 ILIST *FindIndexRef(BLIST *scope, short I);
 ILIST *FindIndexRefInArray(BLIST *scope, short I);
-void UpdatePointerLoads(BLIST *scope, struct ptrinfo *pbase, int UR);
+void UpdatePointerLoads(BLIST *scope, struct ptrinfo *pbase, int UR, int unroll);
 INSTQ *KillPointerUpdates(struct ptrinfo *pbase, int UR);
 struct ptrinfo *FindMovingPointers(BLIST *scope);
 void UnrollCleanup(LOOPQ *lp, int unroll);
@@ -54,4 +54,16 @@ void FinalizeVectorCleanup(LOOPQ *lp, int unroll);
 int DoAllScalarExpansion(LOOPQ *lp, int unroll, int vec);
 void UpdateUnrolledIndices(BLIST *scope, short I, int UR);
 int NonLocalDeref(short dt);
+void Set_OL_NEINC_One();
+int Get_OL_NEINC();
+INSTQ *GetSEHeadTail(LOOPQ *lp, short se, short ne, short *ses, int vec,
+                     int sflag);
+void AddInstToPrehead(LOOPQ *lp, INSTQ *iadd, short type, short r0, short r1);
+void AddInstToPosttail(LOOPQ *lp, INSTQ *iadd, short type, short r0, short r1);
+int DoScalExpansOnLoop(LOOPQ *lp, short type, short se, short *ses);
+int DelLoopControl(LOOPQ *lp);
+int CountUnrollFactor(LOOPQ *lp);
+short *UpdateDeref(INSTQ *ip, int ireg, int inc);
+struct ptrinfo *FindConstMovingPtr(BBLOCK *bp);
+int FindNumIFs(BLIST *scope);
 #endif

@@ -1,0 +1,40 @@
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=24 NB=24 KB=48 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-3.681403e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=48 NB=48 KB=168 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-6.771320e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=72 NB=72 KB=24 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-9.315076e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=96 NB=72 KB=48 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-9.941486e+04  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=120 NB=120 KB=52 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-1.037682e+05  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=144 NB=144 KB=52 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-1.055440e+05  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=312 NB=144 KB=48 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-1.056191e+05  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'
+ID=25 ROUT='ATL_samm24x4x2_fma3.S' AUTH='R. Clint Whaley' TA='T' TB='N' \
+   OPMV=3 VLEN=8 KU=2 NU=4 MU=24 MB=168 NB=336 KB=60 KCLN=1 AOUTER=1  \
+   KRUNTIME=1 LDCTOP=1  \
+   MFLOP=-1.062137e+05  ASM=GAS_x8664 \
+     CFLAGS='-x assembler-with-cpp -mavx -mfma'  COMP='gcc'

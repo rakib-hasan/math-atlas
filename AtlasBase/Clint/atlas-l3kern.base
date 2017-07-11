@@ -8,6 +8,9 @@
 @extract -b @(topd)/gen.inc what=cw @(aw00)
 @ROUT !
 #include "atlas_kern3.h"
+#ifdef USE_AMM
+   #undef USE_AMM
+#endif
 
 @ROUT ATL_sycopyL
 #ifdef TREAL
@@ -918,12 +921,12 @@ void Mjoin(Mjoin(PATL,trmmL),ATLP)
       #ifdef TREAL
          if ( SCALAR_IS_ONE(alpha) ) Mjoin(ATL_trcopy,_a1)(M, alpha, A, lda, a);
          else Mjoin(ATL_trcopy,_aX)(M, alpha, A, lda, a);
-         ATL_assert(M <= ATL_rkAMM_LASTKB); /* aliasing chk */
+         ATL_assert(M <= ATL_VWopgen_MAX_KB); /* aliasing chk */
          ATL_almm(AtlasTrans, AtlasNoTrans, M, N, M, one, a, M, C, ldc, 
                   zero, C, ldc);
       #else
          ATL_trcopy(M, A, lda, a);
-         ATL_assert(M <= ATL_rkAMM_LASTKB); /* aliasing chk */
+         ATL_assert(M <= ATL_VWopgen_MAX_KB); /* aliasing chk */
          ATL_almm(AtlasTrans, AtlasNoTrans, M, N, M, valpha, a, M, C, ldc, 
                   zero, C, ldc);
       #endif
@@ -955,12 +958,12 @@ void Mjoin(Mjoin(PATL,trmmR),ATLP)
       #ifdef TREAL
          if ( SCALAR_IS_ONE(alpha) ) Mjoin(ATL_trcopy,_a1)(N, alpha, A, lda, a);
          else Mjoin(ATL_trcopy,_aX)(N, alpha, A, lda, a);
-         ATL_assert(N <= ATL_rkAMM_LASTKB); /* aliasing chk */
+         ATL_assert(N <= ATL_VWopgen_MAX_KB); /* aliasing chk */
          ATL_almm(AtlasNoTrans, AtlasNoTrans, M, N, N, one, C, ldc, a, N, 
                   zero, C, ldc);
       #else
          ATL_trcopy(N, A, lda, a);
-         ATL_assert(N <= ATL_rkAMM_LASTKB); /* aliasing chk */
+         ATL_assert(N <= ATL_VWopgen_MAX_KB); /* aliasing chk */
          ATL_almm(AtlasNoTrans, AtlasNoTrans, M, N, N, valpha, C, ldc, a, N, 
                   zero, C, ldc);
       #endif
@@ -4222,7 +4225,7 @@ void Mjoin(Mjoin(PATL,trsmL),ATLP)
       ATL_trcopy(M, A, lda, a);
    #endif
    ATL_invert(M, a, M);
-   ATL_assert(M <= ATL_rkAMM_LASTKB); /* aliasing chk */
+   ATL_assert(M <= ATL_VWopgen_MAX_KB); /* aliasing chk */
    ATL_almm(AtlasNoTrans, AtlasNoTrans, M, N, M, alpha, a, M, C, ldc, 
             zero, C, ldc);
    free(va);
@@ -4253,7 +4256,7 @@ void Mjoin(Mjoin(PATL,trsmR),ATLP)
          ATL_trcopy(N, A, lda, a);
       #endif
       ATL_invert(N, a, N);
-      ATL_assert(N <= ATL_rkAMM_LASTKB); /* aliasing chk */
+      ATL_assert(N <= ATL_VWopgen_MAX_KB); /* aliasing chk */
       ATL_almm(AtlasNoTrans, AtlasNoTrans, M, N, N, alpha, C, ldc, a, N, 
                zero, C, ldc);
       free(va);
@@ -4462,7 +4465,7 @@ int Mjoin(Mjoin(Mjoin(PATL,herk),UploNM),N)
    (const int N, const int K, const void *valpha, const void *A, const int lda, 
     const void *vbeta, void *C, const int ldc)
 {
-#ifndef USE_AMM
+#if 0
    Mjoin(PATL,herk_IP)(Uplo_, AtlasNoTrans, N, K, *((TYPE*)valpha), 
                        A, lda, *((TYPE*)vbeta), C, ldc);
 #else
@@ -4508,7 +4511,7 @@ int Mjoin(Mjoin(Mjoin(PATL,herk),UploNM),C)
    (const int N, const int K, const void *valpha, const void *A, const int lda, 
     const void *vbeta, void *C, const int ldc)
 {
-#ifndef USE_AMM
+#if 0
    Mjoin(PATL,herk_IP)(Uplo_, AtlasConjTrans, N, K, *((TYPE*)valpha), 
                        A, lda, *((TYPE*)vbeta), C, ldc);
 #else
@@ -4548,13 +4551,33 @@ int Mjoin(Mjoin(Mjoin(PATL,herk),UploNM),C)
 #endif
    return(0);
 }
+@ROUT ATL_syrk_N_new
+   @define ATA @AtlasNoTrans@
+int Mjoin(Mjoin(Mjoin(PATL,syrk),UploNM),N)
+@ROUT ATL_syrk_T_new
+   @define ATA @AtlasTrans@
+int Mjoin(Mjoin(Mjoin(PATL,syrk),UploNM),T)
+@ROUT ATL_syrk_N_new ATL_syrk_T_new
+      (const int N, const int K, const void *valpha, const void *A,
+       const int lda, const void *vbeta, void *C, const int ldc)
+{
+   #ifdef TREAL
+      #define ALPH *((TYPE*)valpha)
+      #define BETA *((TYPE*)vbeta)
+   #else
+      #define ALPH valpha
+      #define BETA vbeta
+   #endif
+   return(Mjoin(PATL,syrk_amm)(Uplo_, @(ATA), N, K, ALPH, A, lda, 
+                               BETA, C, ldc));
+}
 @ROUT ATL_syrk_N
 #define syr_put Mjoin(Mjoin(PATL,trput),UploNM)
 int Mjoin(Mjoin(Mjoin(PATL,syrk),UploNM),N)
       (const int N, const int K, const void *valpha, const void *A,
        const int lda, const void *vbeta, void *C, const int ldc)
 {
-#ifndef USE_AMM
+#ifdef USE_AMM
    #ifdef TREAL
       Mjoin(PATL,syrk_IP)(Uplo_, AtlasNoTrans, N, K, *((TYPE*)valpha), 
                           A, lda, *((TYPE*)vbeta), C, ldc);
@@ -4612,7 +4635,7 @@ int Mjoin(Mjoin(Mjoin(PATL,syrk),UploNM),T)
    (const int N, const int K, const void *valpha, const void *A, const int lda, 
     const void *vbeta, void *C, const int ldc)
 {
-#ifndef USE_AMM
+#ifdef USE_AMM
    #ifdef TREAL
    Mjoin(PATL,syrk_IP)(Uplo_, AtlasTrans, N, K, *((TYPE*)valpha), A, lda, 
                        *((TYPE*)vbeta), C, ldc);

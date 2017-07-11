@@ -163,7 +163,7 @@ tar cvf atlas.tar \
      ATLAS/bin/atlas_install.c ATLAS/bin/gemmtst.c ATLAS/bin/lutst.c \
      ATLAS/bin/qrtst.c ATLAS/bin/stattime.c ATLAS/bin/gpmmtst.c \
      ATLAS/bin/sum2csv.sh ATLAS/bin/l2peak.sh ATLAS/bin/testBV.c \
-     ATLAS/bin/testtBV.c ATLAS/bin/testAC.c \
+     ATLAS/bin/testtBV.c ATLAS/bin/testAC.c ATLAS/bin/*iopt.c \
      ATLAS/bin/ormtst.c ATLAS/bin/extract.c ATLAS/bin/tvec*.c \
      ATLAS/bin/l?blastst.c  ATLAS/bin/atlas_tee.c ATLAS/bin/atlas_waitfile.c \
      ATLAS/bin/invtst.c ATLAS/bin/slvtst.c ATLAS/bin/lanbtst.c \
@@ -366,6 +366,7 @@ tar cvf atlas.tar \
      ATLAS/tune/blas/gemm/CASES/objs/* ATLAS/tune/blas/gemm/fc.c \
      ATLAS/tune/blas/gemm/emit_mm.c ATLAS/tune/blas/gemm/mmtst.c \
      ATLAS/tune/blas/gemm/findCE.c ATLAS/tune/blas/gemm/*gen.c \
+     ATLAS/tune/blas/gemm/ucpytest.c \
 @skip     ATLAS/tune/blas/gemm/mmksearch_sse.c ATLAS/tune/blas/gemm/mmgen_sse.c \
 @skip     ATLAS/tune/blas/gemm/mmsearch.c ATLAS/tune/blas/gemm/mmcuncpsearch.c \
      ATLAS/tune/blas/gemm/tfc.c \
@@ -373,9 +374,13 @@ tar cvf atlas.tar \
      ATLAS/tune/blas/gemm/mmtime_pt.c ATLAS/tune/blas/gemm/*.base \
      ATLAS/tune/blas/gemm/mmtime_pt3f.c  ATLAS/tune/blas/gemm/uammgen.c \
      ATLAS/tune/blas/gemm/emit_amm.c ATLAS/tune/blas/gemm/emit_uamm.c \
-     ATLAS/tune/blas/gemm/ammsearch.c ATLAS/tune/blas/gemm/uammsrch.c \
+     ATLAS/tune/blas/gemm/ammsearch.c ATLAS/tune/blas/gemm/*srch.c \
      ATLAS/tune/blas/gemm/gmmsearch.c ATLAS/tune/blas/gemm/prefparse.c \
-     ATLAS/tune/blas/gemm/cpysearch.c \
+     ATLAS/tune/blas/gemm/ammk1srch.c ATLAS/tune/blas/gemm/ammkgen.c \
+     ATLAS/tune/blas/gemm/addKClean.c \
+     ATLAS/tune/blas/gemm/bfisrch.c ATLAS/tune/blas/gemm/cp*.c \
+     ATLAS/tune/blas/gemm/opsrch.c ATLAS/tune/blas/gemm/ipsrch.c \
+     ATLAS/tune/blas/gemm/fko_atlas-mmkg.base \
      ATLAS/tune/blas/gemm/peaktim.c ATLAS/tune/blas/gemm/cnbtune.c \
      ATLAS/tune/blas/gemm/AMMCASES/*.idx \
      ATLAS/tune/blas/gemm/AMMCASES/ATL_*.[c,S] \
@@ -431,7 +436,8 @@ tar cvf atlas.tar \
      ATLAS/tune/blas/level1/ROT/*.c ATLAS/tune/blas/level1/ROT/*.dsc \
      ATLAS/tune/sysinfo/L1CacheSize.c ATLAS/tune/sysinfo/emit_typ.c \
      ATLAS/tune/sysinfo/masrch.c ATLAS/tune/sysinfo/time.c \
-     ATLAS/tune/sysinfo/cacheSweep.c \
+     ATLAS/tune/sysinfo/cachesrch.c ATLAS/tune/sysinfo/tmemwalk.c \
+     ATLAS/tune/sysinfo/cacheInfo_x86.c \
      ATLAS/tune/sysinfo/ATL_cputime.c ATLAS/tune/sysinfo/ATL_walltime.c \
      ATLAS/tune/sysinfo/GetSysSum.c ATLAS/tune/sysinfo/matime.c \
      ATLAS/tune/sysinfo/emit_buildinfo.c ATLAS/tune/sysinfo/emit_lamch.c \
@@ -1363,7 +1369,7 @@ Makefile :$(basjr) $(incf)
 @endwhile
 @ROUT ATLAS/tune/blas/gemm/CPYCASES
 basfn = $(basdRCW)/atlas-mmcpy.base
-@multidef rcw_kcp ATL_cpammC12x4_aXbX.c
+@multidef rcw_kcp ATL_skblk2C3x3.c ATL_cpAN2blk4_avx2.c ATL_cpAN2blk12_avx2.c
 @multidef rcw_cp
    @whiledef pre z c d s
       @(pre)copy.idx
@@ -1647,7 +1653,7 @@ all : $(files)
       ATLAS/tune/threads
 
 @declare "files = " y y
-@ROUT ATLAS/tune/blas/gemm `   atlas-mmg.base atlas-mmkg.base ammm_fko.B`
+@ROUT ATLAS/tune/blas/gemm `   atlas-mmg.base atlas-mmkg.base fko_atlas-mmkg.base`
 @ROUT ATLaS/tune/threads `DoFlops_amd64.S`
    @whiledef rt
       @(rt).c
@@ -1657,8 +1663,8 @@ all : $(files)
 @skip @ROUT ATLAS/tune/blas/gemv `emit_head.c emit_rmvT.c mvgen_sse.c atlas-l2g.base`
 @ROUT ATLAS/tune/blas/gemv `atlas-l2g.base`
 @skip @ROUT ATLAS/tune/blas/gemm `emit_mm.c vnbmmsearch.c emit_vKB.c mm_old2new.c vmmf_gccsub.c`
-@ROUT ATLAS/tune/blas/gemm `emit_mm.c mmflagsearch.c uammsrch.c uammsearch.c gmmsearch.c ammsearch.c emit_uamm.c emit_amm.c uammgen.c cpcgen.c ammgen.c cm2amtst.c peaktim.c cnbtune.c prefparse.c szblk.c cpysearch.c`
-@ROUT ATLAS/tune/sysinfo `emit_typ.c emit_lamch.c cacheSweep.c`
+@ROUT ATLAS/tune/blas/gemm `emit_mm.c mmflagsearch.c uammsrch.c uammsearch.c gmmsearch.c trsmsrch.c bfisrch.c ipsrch.c opsrch.c ammk1srch.c ammsearch.c emit_uamm.c emit_amm.c uammgen.c cphgen.c cpygen.c ammkgen.c ammgen.c cm2amtst.c peaktim.c cnbtune.c prefparse.c szblk.c cpysearch.c cpydrv.c cpyfvw.c addKClean.c cpytest.c ucpytest.c`
+@ROUT ATLAS/tune/sysinfo `emit_typ.c emit_lamch.c cachesrch.c tmemwalk.c cacheInfo_x86.c`
 @enddeclare
 
 all : $(files)
@@ -1685,8 +1691,10 @@ atlas-l2g.base : $(basdRCW)/atlas-l2g.base
 @ROUT ATLAS/tune/sysinfo
 emit_typ.c : $(basfn) $(incf)
 	$(extC) -b $(basfn) -o $@ rout=PrintTypeHead
-cacheSweep.c : $(basfn) $(incf)
+@whiledef rt cachesrch tmemwalk cacheInfo_x86
+@(rt).c : $(basfn) $(incf)
 	$(extC) -b $(basfn) -o $@ rout=$*
+@endwhile
 emit_lamch.c : $(basdRCW)/atlas-lp.base
 	$(extC) -b $(basdRCW)/atlas-lp.base -o $@ rout=$*
 @ROUT ATLAS/tune/blas/ger
@@ -1698,8 +1706,8 @@ r1sum2csv.c : $(basdRCW)/script.base
 @endwhile
    @multidef rt r1gen_sse
 @ROUT ATLAS/tune/blas/gemm
-ammm_fko.B : $(basd)/ammm_fko.B
-	cp $(basd)/ammm_fko.B .
+fko_atlas-mmkg.base : $(basd)/fko_atlas-mmkg.base
+	cp $(basd)/fko_atlas-mmkg.base .
 atlas-mmkg.base : $(basd)/atlas-mmkg.base
 	cp $(basd)/atlas-mmkg.base .
 atlas-mmg.base : $(basd)/atlas-mmg.base
@@ -1719,12 +1727,16 @@ atlas-mmg.base : $(basd)/atlas-mmg.base
 
 mmflagsearch.c : $(basfn) $(incf)
 	$(extC) -b $(basfn) -o $@ rout=$*
-@whiledef rt cpysearch cpcgen
+@whiledef rt cpysearch cpygen cphgen cpydrv cpyfvw cpytest ucpytest
 @(rt).c : $(basdRCW)/atlas-mmcpy.base $(incf)
 	$(extC) -b $(basdRCW)/atlas-mmcpy.base -o $@ rout=$*
 @endwhile
-@multidef rt gmmsearch prefparse szblk ammgen uammgen
-@whiledef rt uammsrch uammsearch ammsearch emit_amm emit_uamm cm2amtst peaktim cnbtune
+
+@multidef rt 
+   gmmsearch prefparse szblk ammkgen ammgen uammgen cnbtune addKClean
+   bfisrch ammk1srch ipsrch opsrch trsmsrch
+@endmultidef
+@whiledef rt uammsrch uammsearch ammsearch emit_amm emit_uamm cm2amtst peaktim
 @(rt).c : $(basdRCW)/atlas-ammm.base $(incf)
 	$(extC) -b $(basdRCW)/atlas-ammm.base -o $@ rout=$*
 @endwhile
@@ -1757,17 +1769,17 @@ basfn = $(basdRCW)/gemmVNB.base
 @endmultidef
 @ROUT ATLAS/src/blas/ammm
 basfn = $(basdRCW)/atlas-ammm.base
+
+@BEGINSKIP
+   ammmMNK ammmNMK cammm cammmMNK cammmNMK ammmREC ammmNKM cammm_rkK ammm_rkK
+   cammm_tN GetAmmmInfo GetRankKInfo GetAmmmInfoSQ CopyInfo_rkK GetInfo_rkK
+   ammmM cammmM  ammmN cammmN  ammm_syrk ammmK cammmK ammKernInfo 
+   trsm_ammLL
+@ENDSKIP
 @multidef rt 
-@skip ammmMNK ammmNMK cammm cammmMNK cammmNMK ammmREC ammmNKM cammm_rkK ammm_rkK
-@skip cammm_tN
-   GetAmmmInfo GetRankKInfo GetAmmmInfoSQ
-   ammm ammm_1b ammm_rk2 ammm_IP ammm_tN syrk_IP syrk_amm syrk_OP
-   rk4n4 ammmKNMK ammmKMNK ammm_syrk
-   cammm_1b cammm_rk2
-   ammmK cammmK oploops
-@SKIP ammmM cammmM  ammmN cammmN 
-   ammm_rkK aliased_rkK 
-   iploops
+   opsyrkInfo opinfo ipinfo ipmeninfo ipsyrkinfo
+   ammm ammm_1b ammm_rk2 cammm_rk2 ammm_IP ammm_tN syrk_IP syrk_amm syrk_OP
+   rk4n4 ammmKNMK ammmKMNK oploops iploops ammm_rkK aliased_rkK 
 @endmultidef
 
 @ROUT ATLAS/src/blas/gemm
@@ -2681,6 +2693,7 @@ CompMake.txt : $(basf)
    Corei264AVXp4 Corei264AVXp12 Corei164SSE3p12 Corei464AVXMACp4
    Corei232AVXp4
    AMD64K10h64SSE3p32
+   AMDRyzen64AVXMACp8
    ARMa1532FPV3D32MACp4 ARMa1532FPV3D32MACNONIEEEp4 ARMa732FPV3D32MACp4
    ARMa932FPV3D16MACp2  ARMa932FPV3D32MACp4
    ARM64xgene164p8 POWER864LEVSXp4 
@@ -2693,7 +2706,7 @@ basdr = $(basdRCW)/misc/ARCHDEF
       @define arf1 @@(arf)@
    @endwhile
    CreateDef.sh KillDirs.sh CreateDirs.sh CreateTar.sh Makefile negflt.c 
-   negmmfile.c negmvfile.c negr1file.c 
+   negmmfile.c negmvfile.c negr1file.c negcpfile.c
    atlas_test1.1.3.tar.bz2 lapack_test.tar.bz2
    ifko.tar.bz2
 @enddeclare
@@ -2789,7 +2802,7 @@ $(basdr)/HAMMER32SSE2 : $(basdr)/HAMMER32SSE3
 @(rt) : $(basdRCW)/atlas-def.base $(incf)
 	$(extM) -b $(basdRCW)/atlas-def.base -o @(rt) rout=@(rt)
 @endwhile
-@whiledef rt negflt negr1file negmvfile negmmfile
+@whiledef rt negflt negr1file negmvfile negmmfile negcpfile
 @(rt).c : $(basdRCW)/script.base $(incf)
 	$(extC) -b $(basdRCW)/script.base -o $@ rout=$*
 @endwhile
@@ -2938,7 +2951,7 @@ Makefile : $(basdRCW)/config.base $(incf)
 @endskip
 @ROUT ATLAS/bin
 @declare "files = " y y
-   testBV.c testtBV.c testAC.c
+   time_iopt.c test_iopt.c testBV.c testtBV.c testAC.c
    gemmtst.c llttst.c uumtst.c lutst.c slvtst.c latime.c lanbtst.c 
    trtritst.c invtst.c luflops.c ammswptst.c
    gpmmtst.c atlas_install.c atlas_tee.c printblk.c atlas_waitfile.c second.c 
@@ -3012,8 +3025,8 @@ dlp1000.f : $(basdRCW)/atlas.base
 @(rt).c : $(basdRCW)/script.base $(incf)
 	$(extC) -b $(basdRCW)/script.base -o $@ rout=$*
 @endwhile
-@whiledef rt test testt
-@(rt)BV.c : $(basdRCW)/atlasBV.base $(incf)
+@whiledef rt testBV testtBV test_iopt time_iopt
+@(rt).c : $(basdRCW)/atlasBV.base $(incf)
 	$(extC) -b $(basdRCW)/atlasBV.base -o $@ rout=$*
 @endwhile
 @multidef rt
@@ -3089,7 +3102,7 @@ $(topd)/TexDoc/@(rt).pdf : $(topd)/TexDoc/@(rt).tex
 @ROUT ATLAS/include
 @declare "files = " y y
    cblas_test.h atlas_pkblas.h
-   atlas_f77.h atlas_misc.h atlas_fopen.h
+   atlas_f77.h atlas_misc.h atlas_fopen.h atlas_cpuid.h atlas_iopt.h
    cblas.h atlas_tst.h atlas_aux.h
    atlas_lvl3.h atlas_lvl2.h 
    atlas_level1.h atlas_level2.h atlas_level3.h 
@@ -3115,7 +3128,7 @@ $(topd)/TexDoc/@(rt).pdf : $(topd)/TexDoc/@(rt).tex
    atlas_tlapack.h
    atlas_asm.h atlas_C2Flapack.h C_lapack.h atlas_lamch.h
 @skip   atlas_omplvl3.h
-   atlas_cpparse.h
+   atlas_cpparse.h atlas_cptesttime.h
    atlas_mvparse.h atlas_r1parse.h atlas_mmparse.h atlas_genparse.h
    atlas_mmtesttime.h atlas_r1testtime.h atlas_r2testtime.h atlas_gentesttime.h
    atlas_mvtesttime.h atlas_mmgen.h
@@ -3171,7 +3184,7 @@ atlas_tlapack.h : $(basdRCW)/atlas-thr.base
 	$(extC) -b $(basdRCW)/atlas-thr.base -o $@ rout=$@
 atlas_mmgen.h : $(basdRCW)/atlas-parse.base
 	$(extC) -b $(basdRCW)/atlas-parse.base -o $@ rout=$@
-@whiledef rt r1 r2 mm gen mv
+@whiledef rt r1 r2 mm gen mv cp
 atlas_@(rt)testtime.h : $(basdRCW)/atlas-parse.base
 	$(extC) -b $(basdRCW)/atlas-parse.base -o $@ rout=$@
 @endwhile
@@ -3228,7 +3241,7 @@ atlas-c2flp.base atlas-c2flp.base atlas-lp.base atlas-trsm.base
    @undef bas
 @endwhile
 
-@whiledef rt f77 lvl3 level3 misc enum fopen
+@whiledef rt f77 lvl3 level3 misc enum fopen cpuid iopt
 atlas_@(rt).h : $(basdRCW)/atlas.base $(incf)
 	$(extC) -b $(basdRCW)/atlas.base -o $@ rout=$@
 @endwhile

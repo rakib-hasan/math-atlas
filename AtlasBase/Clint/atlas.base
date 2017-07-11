@@ -274,7 +274,7 @@ int FindMflop
    return(mf);
 }
 
-FindNreg
+int FindNreg
 (
    char pre,   /* precision: s,d,q */
    int fmf,    /* number of mflops to force timer on */
@@ -6003,7 +6003,7 @@ void CreateHeader(char pre, char *fnam, int L1Size, int muladd, int lat,
            toupper(pre), toupper(pre));
    if (muladd) fprintf(fpout, "#define ATL_MULADD\n");
    else fprintf(fpout, "#define ATL_NOMULADD\n");
-   fprintf(fpout, "#define ATL_L1elts %d\n", L1Size);
+@skip   fprintf(fpout, "#define ATL_L1elts %d\n", L1Size);
    fprintf(fpout, "#define ATL_fplat  %d\n", lat);
    fprintf(fpout, "#define ATL_lbnreg %d\n", lbnreg);
    fprintf(fpout, "#define ATL_mmnreg %d\n", mmnreg);
@@ -6050,11 +6050,13 @@ int main(int nargs, char **args)
    }
    pre = *args[1];
 
+   @BEGINSKIP
    L1Size = 1024 * GetL1CacheSize(64);
    if (pre == 'd') L1Size /= ATL_dsize;
    else if (pre == 's') L1Size /= ATL_ssize;
    else if (pre == 'c') L1Size /= ATL_csize;
    else if (pre == 'z') L1Size /= ATL_zsize;
+   @ENDSKIP
    getfpinfo(pre, &muladd, &lat, &lbnreg, &nkflop);
    pgsz = GetPageSize();
    CreateHeader(pre, args[2], L1Size, muladd, lat, lbnreg, nkflop, 0, pgsz);
@@ -13649,8 +13651,11 @@ int main(int nargs, char **args)
    CreateFile(file);
    return(0);
 }
+@ROUT PrintTypeHead 
+   @define cwdate @2017@
 @ROUT PrintTypeHead emit_lvl1 emitmv genmv
-@extract -b @(topd)/gen.inc what=cw
+@extract -b @(topd)/cw.inc lang=C -def cwdate 1997
+@skip @extract -b @(topd)/gen.inc what=cw
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -20145,6 +20150,297 @@ int cblas_errprn(int ierr, int info, char *form, ...);
 
 #endif
 
+@ROUT atlas_iopt.h
+@extract -b @(topd)/cw.inc lang=C -def cwdate 2016
+#ifndef ATLAS_IOPT_H
+   #define ATL_IOPT_H
+
+#define ATL_IsPow2(i_) /* 1 iff i_ is a power-of-2, 0 else */ \
+   ( !((i_)&((i_)-1)) )
+
+/*
+ * ans_ undefined if i_=0 (no bits set)
+ */
+#if defined(__GNUC__) && defined(ATL_GAS_x8664) || defined(ATL_GAS_x8632)
+   #define ATL_FAST_LSB 1  /* signal we've got a fast least set bit */
+   #define ATL_iLeastSetBit(ans_, i_) \
+      __asm__("bsf %1, %%eax" : "=a"(ans_):"r"(i_))
+#elif defined(__GNUC__) && defined(ATL_GAS_ARM64)
+   #define ATL_FAST_LSB 1
+   #define ATL_iLeastSetBit(ans_, i_) \
+      __asm__("rbit %0, %0; clz %0, %0" : "=r"(ans_):"0"(i_))
+
+#else
+   #define ATL_iLeastSetBit(ans_, i_) \
+   @BEGINSKIP
+   { \
+      register unsigned int p_=0, k_=(i_), d_=16, msk_=(1<<16)-1; \
+      do \
+      { \
+         int rej_; \
+         rej_ = (k_&msk_) ? 0 : d_; /* # of lower bits to reject */ \
+         p_ += rej_; \
+         k_ >>= rej_; \
+         d_ >>= 1; \
+         msk_ >>= d_; \
+      } \
+      while (d_ != 1); \
+      p_ += !(k_&1); \
+      ans_ = p_; \
+   }
+   @ENDSKIP
+   { \
+      register unsigned int p_, k_=(i_), d_=16, msk_=(1<<16)-1, rej_; \
+      /* Lower 16 */ \
+      rej_ = (k_&msk_) ? 0 : d_; /* # of lower bits to reject */ \
+      p_ = rej_; \
+      k_ >>= rej_; \
+      d_ >>= 1; \
+      msk_ >>= d_; \
+      /* Lower 8 */ \
+      rej_ = (k_&msk_) ? 0 : d_; /* # of lower bits to reject */ \
+      p_ += rej_; \
+      k_ >>= rej_; \
+      d_ >>= 1; \
+      msk_ >>= d_; \
+      /* Lower 4 */ \
+      rej_ = (k_&msk_) ? 0 : d_; /* # of lower bits to reject */ \
+      p_ += rej_; \
+      k_ >>= rej_; \
+      d_ >>= 1; \
+      msk_ >>= d_; \
+      /* Lower 2 */ \
+      rej_ = (k_&msk_) ? 0 : d_; /* # of lower bits to reject */ \
+      p_ += rej_; \
+      k_ >>= rej_; \
+      ans_ = p_ + 1 - (k_&1); \
+   }
+#endif
+   #define ATL_iLeastSetBit8(ans_, i_) /* set bit known to be 1st 8 bits */ \
+   { \
+      register unsigned int p_, k_=(i_), d_=4, msk_=(1<<4)-1, rej_; \
+      /* Lower 4 */ \
+      rej_ = (k_&msk_) ? 0 : d_; /* # of lower bits to reject */ \
+      p_ = rej_; \
+      k_ >>= rej_; \
+      d_ >>= 1; \
+      msk_ >>= d_; \
+      /* Lower 2 */ \
+      rej_ = (k_&msk_) ? 0 : d_; /* # of lower bits to reject */ \
+      p_ += rej_; \
+      k_ >>= rej_; \
+      d_ >>= 1; \
+      msk_ >>= d_; \
+      ans_ = p_ + 1 - (k_&1); \
+   }
+   /* set bit known to be in 1st 8 bits, or behavior undefined */
+   #define ATL_iLeastSetBit4(ans_, i_) \
+   { \
+      register unsigned int p_, k_=(i_); \
+      /* Lower 2 */ \
+      p_ = (k_&0x3) ? 0 : 2; /* # of lower bits to reject */ \
+      k_ >>= p_; \
+      ans_ = p_ + 1 - (k_&1); \
+   }
+#endif /* end multiple include guard */
+
+#ifdef ATL_WANT_ILCM
+   #define ATL_WANT_IGCD
+#endif
+
+#if defined(ATL_WANT_IGCD) && !defined ATL_GCD_H
+   #define ATL_GCD_H
+
+#ifndef INLINE
+   #if defined(__STDC_VERSION__) && (__STDC_VERSION__/100 >= 1999)
+      #define INLINE inline
+   #else
+      #define INLINE
+   #endif
+#endif
+#ifndef Mmax
+   #define Mmax(i_, j_) ((i_ >= j_) ? i_:j_)
+#endif
+#ifndef Mmin
+   #define Mmin(i_, j_) ((i_ >= j_) ? j_:i_)
+#endif
+
+static INLINE unsigned int ATL_iGCD(const unsigned int M, const unsigned int N)
+{
+/*
+ * Compute the Greatest Common Divisor using Stein's Algorithm.  Has been
+ * modified to exploit bit-level operations, with inline assembly for x86
+ * and ARM64.  On these systems, seems to be faster than normal Stein's 
+ * always.  If you don't have a FAST_LSB, however, sometimes its faster than
+ * normal Stein's, and sometimes not.  On systems where its slower, should
+ * be easy to tweak ATL_iLeastSetBit to at least tie.
+ */
+   unsigned int gcdsh=0;
+   if (M != N)
+   {
+      unsigned int tmp, min, max;
+      max = Mmax(M,N);
+      min = Mmin(M,N);
+      if (ATL_IsPow2(max))                /* power of 2s in min are whole GCD */
+      {
+         ATL_iLeastSetBit(tmp, min);      /* compute shift to make min odd */
+         return(1<<tmp);
+      }
+      if (ATL_IsPow2(min))               /* Min pwr2 between max&min are GCD */
+      {
+         unsigned int sh;
+         ATL_iLeastSetBit(tmp, max);      /* compute shift to make max odd */
+         ATL_iLeastSetBit(sh,  min);      /* compute shift to make min odd */
+         gcdsh = Mmin(tmp, sh);
+         return(1<<gcdsh);
+      }
+      tmp = min;
+      if (!(max&1))                        /* if max isn't odd, make it so */
+      {                                    /* so we match end-of-loop state */
+         unsigned int sh;
+         int shA, shI;                     /* shift mAx, shift mIn */
+
+         ATL_iLeastSetBit(shI, min);       /* compute shift to make min odd */
+         min >>= shI;                      /* all 2s in min removed, now odd */
+         ATL_iLeastSetBit(shA, max);       /* compute shift to make max odd */
+         sh = Mmin(shA, shI);
+         max >>= sh;                       /* max is divided by common pwr 2 */
+         gcdsh += sh;
+         if (min == 1)                     /* easily predicted not true */
+            goto MIN_POW2;                 /* hint comp put ret outside blk */
+         do
+         {
+            max -= (max&1) ? min:0;        /* make max even */
+            max >>= 1;                     /* max now even or odd */
+         }
+         while (max >= min);
+         tmp = max;
+         max = min;                        /* max=min, so odd */
+         min = tmp;
+      }
+      if (tmp)
+      {
+         do                                /* max>=min, max is known odd */
+         {
+            unsigned int sh;
+            int shA, shI;                  /* shift mAx, shift mIn */
+/*
+ *          Problem with branches on even/odd is that they are unpredictable.
+ *          If we assume random scattering of 1s, wrong 50% of time.  However,
+ *          for random, chance of 4 0s in a row is 6.25%, so this is a 
+ *          predictable branch for non-sparse min.  We will remove all
+ *          contiguous 0s at once, sparse min will rapidly be reduced.
+ */
+            #ifndef ATL_FAST_LSB
+            if (min&0xF)
+               ATL_iLeastSetBit4(shI, min) /* compute shift to make min odd */
+            else
+            #endif
+               ATL_iLeastSetBit(shI, min); /* compute shift to make min odd */
+            min >>= shI;                   /* all 2s in min removed, now odd */
+            if (min == 1)                  /* easily predicted not true */
+               goto MIN_POW2;              /* hint comp put ret outside blk */
+            do
+            {
+               max -= (max&1) ? min:0;     /* make max even */
+               max >>= 1;                  /* max now even or odd */
+            }
+            while (max >= min);
+            tmp = max;
+            max = min;                     /* max=min, so odd */
+            min = tmp;
+         }
+         while(tmp);                       /* max is known to be odd */
+      }
+      return(max<<gcdsh);
+   }
+   return(M);
+MIN_POW2:
+   return(1<<gcdsh);
+}
+@BEGINSKIP
+static INLINE unsigned int ATL_iGCD(unsigned int M, unsigned int N)
+/*
+ * Computes the greatest common divisor of M & N via Stein's Algorithm: 
+ * while (M != N && N != 1)
+ *    while (M && N both even) { gcd *= 2; M /= 2;  N/=2; }
+ *    2 no longer factor, so divide surviving even number by 2 until odd
+ *    max=MAX(M,N); min=MIN(M,N);
+ *    gcd(max,min) = gcd(min, (max-min)/2)
+ * NOTE: Behavior undefined if M or N is zero.
+ * Its advantage over normal Stein's algorithm is that all unset bits in
+ * the intermediate computations are skipped with only one if+branch.
+ * ATLAS uses LCM in performance-centric arenas only with relatively small
+ * numbers for both M&N, where this algorithm should be excellent.  If the
+ * number of set bits in M or N is large, this algorithm will blow.
+ */
+{
+   register int omax, max, min, tmp;
+   register int shA, shI, shgcd, tshgcd;  /* Max and Min shift */
+
+   omax = (M >= N) ? M:N;
+   min = (M >= N) ? N:M;
+   if ((min == 1) | (min == omax))
+      return(omax);
+
+   ATL_iLeastSetBit(shA, M);         /* compute shift to make M odd */
+   ATL_iLeastSetBit(shI, N);         /* compute shift to make N odd */
+   tmp = (shA <= shI) ? shA : shI;   /* tmp = MIN(shA,shI); */
+/*
+ * If either M or N is odd, then powers of two do not go into gcd
+ */
+   tshgcd = (((M&1)|(N&1)) == 1) ? 0:tmp;
+   max = M >> shA;                     /* make odd, tshgcd has pwr-2 part */
+   min = N >> shI;                     /* make odd, tshgcd has pwr-2 part */
+   tmp = (max >= min) ? min:max;       /* tmp = MIN(max,min); */
+/*
+ * while (max != min && min != 1)
+ */
+   if ((min != max) & (tmp != 1))
+   {
+      FIND_GCD:                           /* max&min unordered, both odd */
+         max = (max >= min) ? tmp : min;  /* max = MAX(max,min) */
+         min = tmp;                       /* min = MIN(max,min) */
+         max = (max-min)>>1;              /* max is even again */
+         ATL_iLeastSetBit(shA, max);      /* shift to make max odd again */
+         max >>= shA;                     /* both max & min are odd again */
+         tmp = (max >= min) ? min:max;    /* tmp = MIN(max,min); */
+      if ((min != max) & (tmp != 1))      /* if max doesn't have non-pwr2 GCD */
+         goto FIND_GCD;
+   }
+   max = (max >= min) ? max:min;
+   return(((tmp==1)?omax:max)<<tshgcd);
+}
+@ENDSKIP
+#endif /* end GCD multiple include guard */
+
+#if defined(ATL_WANT_ILCM) && !defined ATL_LCM_H
+   #define ATL_LCM_H
+static INLINE unsigned int ATL_iLCM(unsigned int M, unsigned int N)
+/*
+ * Comnputes LCM = M*N / GCD;
+ */
+{
+   unsigned long long mul;
+   int gcd;
+   gcd = ATL_iGCD(M,N);
+   if (gcd == ((M>=N) ? M:N))
+      return(gcd);
+   mul = M * N;
+   #ifdef ATL_FAST_LSB  /* avoid division if LSB is one instruction */
+   if (ATL_IsPow2(gcd))
+   {
+      ATL_iLeastSetBit(gcd, gcd);
+      gcd = (mul >> gcd);
+   }
+   else
+   #endif
+      gcd = mul / gcd;
+   return(gcd);
+}
+   #undef INLINE
+#endif /* end LCM multiple include guard */
+
 @ROUT atlas_misc.h
 @extract -b @(topd)/gen.inc what=cw
 
@@ -20230,12 +20526,23 @@ int cblas_errprn(int ierr, int info, char *form, ...);
    #define ATL_INT int
    #define ATL_CINT const int
 #endif
-#define ATL_SZT size_t
-#define ATL_CSZT const size_t
+#define ATL_SZT ATL_iptr_t
+#define ATL_CSZT const ATL_iptr_t
 #define ATL_UINT unsigned ATL_INT
 #define ATL_CUINT const unsigned ATL_INT
-
-
+/*
+ * Avoid redundant definitions for defined types
+ */
+#if defined(SREAL) || defined(DREAL) || defined(SCPLX) || defined(DCPLX)
+@whiledef mc TYPE SCALAR TREAL
+   #ifdef @(mc)
+      #undef @(mc)
+   #endif
+@endwhile
+#endif
+/*
+ * Define standard CPP macros for types
+ */
 #define ATL_QTYPE long double
 #if defined(SREAL)
    #define EPS 5.0e-7
@@ -20252,7 +20559,7 @@ int cblas_errprn(int ierr, int info, char *form, ...);
    #define ATL_rnone -1.0f
    #define ATL_rzero   0.0f
    #define ATL_typify(m_) Mjoin(m_,f)
-   #include "atlas_ssysinfo.h"
+@skip   #include "atlas_ssysinfo.h"
 #elif defined(DREAL)
    #define EPS 1.0e-15
    #define TYPE double
@@ -20268,7 +20575,7 @@ int cblas_errprn(int ierr, int info, char *form, ...);
    #define ATL_rnone -1.0
    #define ATL_rzero   0.0
    #define ATL_typify(m_) m_
-   #include "atlas_dsysinfo.h"
+@skip   #include "atlas_dsysinfo.h"
 #elif defined (QREAL)
    #define EPS 1.9259299443872358530559779425849273E-34L
    #define TYPE long double
@@ -20296,7 +20603,7 @@ int cblas_errprn(int ierr, int info, char *form, ...);
    #define ATL_rzero   0.0f
    #define ATL_typify(m_) Mjoin(m_,f)
    #define CBLA cblas_c
-   #include "atlas_csysinfo.h"
+@skip   #include "atlas_csysinfo.h"
 #elif defined(DCPLX)
    #define TYPE double
    #define PRE z
@@ -20312,7 +20619,7 @@ int cblas_errprn(int ierr, int info, char *form, ...);
    #define ATL_rzero   0.0
    #define ATL_typify(m_) m_
    #define CBLA cblas_z
-   #include "atlas_zsysinfo.h"
+@skip   #include "atlas_zsysinfo.h"
 #elif defined(QCPLX)
    #define TYPE ATL_QTYPE
    #define PRE e
@@ -20661,6 +20968,9 @@ void ATL_@(pre)ammm
     const @(sty), const @(typ)*,ATL_CSZT,const @(typ)*,ATL_CSZT,
     const @(sty),@(typ)*,ATL_CSZT);
 
+void ATL_@(pre)syrk(const enum ATLAS_UPLO, const enum ATLAS_TRANS,
+               ATL_CSZT N, ATL_CSZT K, const @(sty)alp, const @(typ) *A,
+               ATL_CSZT lda, const @(sty)bet, @(typ) *C, ATL_CSZT ldc);
 void ATL_@(pre)gemm(const enum ATLAS_TRANS, const enum ATLAS_TRANS,
                const int M, const int N, const int K, const @(sty)alpha,
                const @(typ) *A, const int lda, const @(typ) *B, const int ldb,
@@ -20669,7 +20979,7 @@ void ATL_@(pre)symm(const enum ATLAS_SIDE Side, const enum ATLAS_UPLO Uplo,
                const int M, const int N, const @(sty)alpha, 
                const @(typ) *A, const int lda, const @(typ) *B, const int ldb,
                const @(sty)beta, @(typ) *C, const int ldc);
-void ATL_@(pre)syrk(const enum ATLAS_UPLO Uplo, const enum ATLAS_TRANS Trans,
+void ATL_@(pre)syrk_APR(const enum ATLAS_UPLO Uplo,const enum ATLAS_TRANS Trans,
                const int N, const int K, const @(sty)alpha,
                const @(typ) *A, const int lda, const @(sty)beta,
                @(typ) *C, const int ldc);
@@ -20695,11 +21005,14 @@ void ATL_@(pre)trsm(const enum ATLAS_SIDE Side, const enum ATLAS_UPLO Uplo,
  */
 @multidef uty double float
 @whiledef pre z c
+void ATL_@(pre)herk(const enum ATLAS_UPLO, const enum ATLAS_TRANS,
+               ATL_CSZT N, ATL_CSZT K, const @(uty) alp, const @(uty) *A,
+               ATL_CSZT lda, const @(uty) bet, @(uty) *C, ATL_CSZT ldc);
 void ATL_@(pre)hemm(const enum ATLAS_SIDE Side, const enum ATLAS_UPLO Uplo,
                const int M, const int N, const @(uty) *alpha,
                const @(uty) *A, const int lda, const @(uty) *B, const int ldb,
                const @(uty) *beta, @(uty) *C, const int ldc);
-void ATL_@(pre)herk(const enum ATLAS_UPLO Uplo, const enum ATLAS_TRANS Trans,
+void ATL_@(pre)herk_APR(const enum ATLAS_UPLO Uplo,const enum ATLAS_TRANS Trans,
                const int N, const int K, const @(uty) alpha,
                const @(uty) *A, const int lda, const @(uty) beta,
                @(uty) *C, const int ldc);
@@ -20728,19 +21041,19 @@ void ATL_@(pre)her2k(const enum ATLAS_UPLO Uplo, const enum ATLAS_TRANS Trans,
    #define NOTIME 1
    #if defined(SREAL)
       #include "atlas_samm_sum.h"
-      #include "atlas_ssqamm_perf.h"
+      #include "atlas_sopsq_perf.h"
    #elif defined(DREAL)
       #include "atlas_damm_sum.h"
-      #include "atlas_dsqamm_perf.h"
+      #include "atlas_dopsq_perf.h"
    #elif defined(QREAL)
       #include "atlas_qamm_sum.h"
-      #include "atlas_qsqamm_perf.h"
+      #include "atlas_qopsq_perf.h"
    #elif defined(SCPLX)
       #include "atlas_camm_sum.h"
-      #include "atlas_csqamm_perf.h"
+      #include "atlas_copsq_perf.h"
    #elif defined(DCPLX)
       #include "atlas_zamm_sum.h"
-      #include "atlas_zsqamm_perf.h"
+      #include "atlas_zopsq_perf.h"
    #endif
    #undef NOPERF
    #undef NOK1RATIO
@@ -23313,18 +23626,58 @@ void PrintTypeHead(FILE *fpout)
 
    fprintf(fpout, "#ifndef ATLAS_TYPE_H\n");
    fprintf(fpout, "#define ATLAS_TYPE_H\n\n");
+
+   if (sizeof(int) == sizeof(void*))
+      fprintf(fpout, "#define ATL_iptr_t unsigned int\n");
+   else if (sizeof(long) == sizeof(void*))
+      fprintf(fpout, "#define ATL_iptr_t unsigned long\n");
+   else if (sizeof(long long) == sizeof(void*))
+      fprintf(fpout, "#define ATL_iptr_t unsigned long long\n");
+   else if (sizeof(short) == sizeof(void*))
+      fprintf(fpout, "#define ATL_iptr_t unsigned short\n");
+   else if (sizeof(char) == sizeof(void*))
+      fprintf(fpout, "#define ATL_iptr_t unsigned char\n");
+   else
+   {
+      fprintf(stderr, "No integral type same length as pointer!\n");
+      assert(0);
+   }
+   if (sizeof(void*) >= sizeof(double))
+      fprintf(fpout, "#define ATL_cparr_t ATL_iptr_t\n"
+              "#define ATL_cpflt_t double\n");
+   else if (sizeof(void*) >= sizeof(float))
+      fprintf(fpout, "#define ATL_cparr_t ATL_iptr_t\n"
+              "#define ATL_cpflt_t float\n");
+   else if (sizeof(int) >= sizeof(float))
+      fprintf(fpout, "#define ATL_cparr_t unsigned int\n"
+              "#define ATL_cpflt_t float\n");
+   else if (sizeof(long) >= sizeof(float))
+      fprintf(fpout, "#define ATL_cparr_t unsigned long\n"
+              "#define ATL_cpflt_t float\n");
+   else if (sizeof(long long) >= sizeof(float))
+      fprintf(fpout, "#define ATL_cparr_t unsigned long long\n"
+              "#define ATL_cpflt_t float\n");
+   else
+   {
+      fprintf(stderr, "\nNo integral type longer than float!\n");
+      assert(0);
+   }
+   fprintf(fpout, "\n#define ATL_PSIZE %d\n", (int) sizeof(void*));
    fprintf(fpout, "#define ATL_LSIZE %d\n", (int) sizeof(long));
    fprintf(fpout, "#define ATL_ISIZE %d\n", (int) sizeof(int));
    fprintf(fpout, "#define ATL_SSIZE %d\n", (int) sizeof(float));
    fprintf(fpout, "#define ATL_DSIZE %d\n", (int) sizeof(double));
    fprintf(fpout, "#define ATL_CSIZE %d\n", (int) (2*sizeof(float)));
    fprintf(fpout, "#define ATL_ZSIZE %d\n", (int) (2*sizeof(double)));
+   fprintf(fpout, "#define ATL_psize ((size_t)%d)\n", (int) sizeof(void*));
    fprintf(fpout, "#define ATL_lsize ((size_t)%d)\n", (int) sizeof(long));
    fprintf(fpout, "#define ATL_isize ((size_t)%d)\n", (int) sizeof(int));
    fprintf(fpout, "#define ATL_ssize ((size_t)%d)\n", (int) sizeof(float));
    fprintf(fpout, "#define ATL_dsize ((size_t)%d)\n", (int) sizeof(double));
    fprintf(fpout, "#define ATL_csize ((size_t)%d)\n", (int) (2*sizeof(float)));
    fprintf(fpout, "#define ATL_zsize ((size_t)%d)\n", (int) (2*sizeof(double)));
+   fprintf(fpout, "#define ATL_%cMulBySize(N_) %s\n", 'p', 
+           GetInc(sizeof(void*), "((size_t)(N_))"));
    fprintf(fpout, "#define ATL_%cMulBySize(N_) %s\n", 'l', 
            GetInc(sizeof(long), "((size_t)(N_))"));
    fprintf(fpout, "#define ATL_%cMulBySize(N_) %s\n", 'i', 
@@ -23338,8 +23691,9 @@ void PrintTypeHead(FILE *fpout)
    fprintf(fpout, "#define ATL_%cMulBySize(N_) %s\n", 'z', 
            GetInc(2*sizeof(double), "((size_t)(N_))"));
 
-   @multidef ty long int
-   @whiledef pr l i
+
+   @multidef ty void* long int
+   @whiledef pr p l i
    pwr2 = GetPower2(sizeof(@(ty)));
    if (pwr2)
    {
@@ -27875,7 +28229,7 @@ void GetFlags(int nargs, char **args, int *M, int *N0, int *NN, int *incN,
    char *in, *out=file;
 
    file[0] = '\0';
-   *M = ATL_sqAMM_66MB;
+   *M = ATL_opsq_66MB;
    *N0 = 100;
    *NN = 2000;
    *incN = 100;
@@ -27928,11 +28282,11 @@ int main(int nargs, char *args[])
       if (n != NN) nn = tloop(1, NB, Mmax(n-incN,0)+k, n, k, alpha);
       else nn = 10000;
 @endskip
-      nn = 3*ATL_sqAMM_66MB;
+      nn = 3*ATL_opsq_66MB;
       fprintf(fpout, "#define TRSM_%c%c%c%c_Xover %d\n", 
               Side, Uplo, Tran, Diag, nn);
    }
-   fprintf(stdout, "\n\nXover point at NB=%d, N=%d\n\n", ATL_sqAMM_66MB, nn);
+   fprintf(stdout, "\n\nXover point at NB=%d, N=%d\n\n", ATL_opsq_66MB, nn);
    return(0);
 }
 
@@ -31090,12 +31444,14 @@ void GoToTown(int ARCHDEF, int L1DEF, int TuneLA, int NREG)
    ATL_Cassert(system(ln)==0, "Stage 1 install", ln2);
    fp = fopen("INSTALL_LOG/L1CacheSize", "r");
 
+   @BEGINSKIP
    ATL_Cassert(fp, "CACHESIZE SEARCH", ln2);
    ATL_Cassert(fscanf(fp, "%d", &i) == 1, "CACHESIZE SEARCH", ln2);
    fclose(fp);
    fprintf(stdout, "\n\n   Level 1 cache size calculated as %dKB\n", i);
    fprintf(fpsum, "   Level 1 cache size calculated as %dKB.\n\n", i);
    iL1 = i;
+   @ENDSKIP
 
    for (ip=0; ip < 2; ip++)
    {
@@ -31267,7 +31623,7 @@ void GoToTown(int ARCHDEF, int L1DEF, int TuneLA, int NREG)
          sprintf(ln, "%s cAMMinstall pre=%c %s %s\n", fmake, pre, redir, ln2);
       fprintf(stdout, "%s", ln);
       ATL_Cassert(system(ln)==0, "GEMM TUNE", ln2);
-      mmb = ReadMMFileWithPath(pre, "INSTALL_LOG", "geAMMRES.sum");
+      mmb = ReadMMFileWithPath(pre, "INSTALL_LOG", "ipgen.sum");
       ATL_Cassert(mmb, "ACCESS-MAJOR MATMUL TUNE", ln2);
       for (mmp=mmb; mmp->next; mmp = mmp->next);
       ATL_mprintf(2, fpsum, stdout, 
@@ -35985,6 +36341,16 @@ double GetKmmMflop
    sp = ATL_AlignPtr(vp);
    for (i=0; i < tsz; i++)
       sp[i] = dumb_prand(&seed);
+/*
+ * For copy timing, barrier here so above init traffic not charged to cpytime
+ * Kernels usually have some copying to be done, so its OK to overlap a little
+ * init mem traffic!
+ */
+   #if defined(ATL_NCPU) && defined(TIME_COPY)
+      chkin[kp->iam] = 2;
+      for (i=0; i < P; i++)
+         while(chkin[i] < 2);
+   #endif
 
    a = A; b = B; c = C;
    t0 = ATL_walltime();
@@ -36316,6 +36682,7 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
          PrintUsage(args[0], i, args[i]);
       }
    }
+   #ifndef TIME_COPY
 /*
  * If there is a tuned <upr>mflops.frc file, use this in preference to the
  * commandline argument unless the -Rf override flag was used
@@ -36333,6 +36700,7 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
          fclose(fp);
       }
    }
+   #endif
    if (!kp->reps)
    {
       kp->reps = (mflops*1000000.0/((2.0*kp->mb)*kp->nb*kp->kb));
@@ -36434,21 +36802,27 @@ int main(int nargs, char **args)
 #include <string.h>
 
 #define uint unsigned int
-#ifndef ATL_SZA
+#ifdef ATL_SZA
+   #define ATL_getszA(m_, n_, mu_, nu_, vl_) ATL_SZA
+#else
    uint ATL_getszA(uint M, uint K, uint mu, uint ku, uint vlen)
    {
       uint nmu=(M+mu-1)/mu;
       return(nmu*mu*K);
    }
 #endif
-#ifndef ATL_SZB
+#ifdef ATL_SZB
+   #define ATL_getszB(m_, n_, mu_, nu_, vl_) ATL_SZB
+#else
    uint ATL_getszB(uint K, uint N, uint ku, uint nu, uint vlen)
    {
       uint nnu=(N+nu-1)/nu;
       return(nnu*nu*K);
    }
 #endif
-#ifndef ATL_SZC
+#ifdef ATL_SZC
+   #define ATL_getszC(m_, n_, mu_, nu_, vl_) ATL_SZC
+#else
    uint ATL_getszC(uint M, uint N, uint mu, uint nu, uint vlen)
    {
       uint nmu=(M+mu-1)/mu, nnu=(N+nu-1)/nu, blksz=((mu*nu+vlen-1)/vlen)*vlen;
@@ -36501,24 +36875,47 @@ int main(int nargs, char **args)
       #endif
    #endif
 #elif defined(TIME_COPY)
+   #ifndef TO_BLK
+      #define TO_BLK 0
+   #endif
    #ifndef COPYK
       #define COPYK ATL_USERCPMM
    #endif
    #ifdef TREAL
       #ifdef COPY_C
-         void COPYK(const size_t, const size_t, const TYPE, const TYPE*, 
-                    const TYPE, TYPE*, const size_t);
+         #if TO_BLK
+            void COPYK(const size_t, const size_t, const TYPE, const TYPE*, 
+                       const size_t, const TYPE, TYPE*);
+         #else
+            void COPYK(const size_t, const size_t, const TYPE, const TYPE*, 
+                       const TYPE, TYPE*, const size_t);
+         #endif
       #else
-         void COPYK(const size_t, const size_t, const TYPE,
-                    const TYPE*, const size_t, TYPE*);
+         #if TO_BLK
+            void COPYK(const size_t, const size_t, const TYPE,
+                       const TYPE*, const size_t, TYPE*);
+         #else
+            void COPYK(const size_t, const size_t, const TYPE,
+                       const TYPE*, TYPE*, const size_t);
+         #endif
       #endif
    #else
       #ifdef COPY_C
-         void COPYK(const size_t, const size_t, const TYPE*, const TYPE*, 
-                    const TYPE*, const TYPE*, TYPE *, const size_t);
+         #if TO_BLK
+            void COPYK(const size_t, const size_t, const TYPE*, const TYPE*, 
+                       const size_t, TYPE*, TYPE*, TYPE*);
+         #else
+            void COPYK(const size_t, const size_t, const TYPE*, const TYPE*, 
+                       const TYPE*, const TYPE*, TYPE *, const size_t);
+         #endif
       #else
-         void COPYK(const size_t, const size_t, const TYPE*,
-                    const TYPE*, const size_t, TYPE*, TYPE*);
+         #if TO_BLK
+            void COPYK(const size_t, const size_t, const TYPE*,
+                       const TYPE*, const size_t, TYPE*, TYPE*);
+         #else
+            void COPYK(const size_t, const size_t, const TYPE*,
+                       const TYPE*, const TYPE*, TYPE*, const size_t);
+         #endif
       #endif
    #endif
 #elif defined(TCPLX)
@@ -36603,9 +37000,14 @@ int main(int nargs, char **args)
 #endif
 
 struct kmm_struct{
+   #ifdef PUTC
+      TYPE *C;
+      size_t nmblks, ldc;
+   #endif
    #ifdef TIME_COPY
       TYPE *A;
-      size_t nmblks, nnblks, lda;
+      size_t lda;
+      size_t nmblks, nnblks;
       int COLWISE, BM, BN;
    #endif
    int mb, nb, kb;                      /* C: mbxnb, At: kbxmb, B: kbXnb */
@@ -36621,6 +37023,45 @@ struct kmm_struct{
    volatile unsigned char *chkin;       /* P-len array to signal start/done */
 };
 
+/*
+ * Generic copy used to generate bus traffic for outer-product timings
+ * It won't actually copy things in right order, but we don't care.
+ * It will also not be exact same speed as final copy, but the only way
+ * to know that speed is to time all copies for all kerns, which is too expens.
+ * Copy time should only matter for small problems, and should normally be
+ * dominated by cache affects, which are only minorly affected by
+ * implementation details.  This copies best-possible-ordering should make
+ * it look like a fast copy despite lack of vectorization.
+ */
+#ifdef PUTC
+   #ifdef TCPLX
+static void gecpy(const int M, const int N, const TYPE *rC, const TYPE *iC, 
+                  TYPE *C, size_t ldc)
+{
+   register int j;
+
+   ldc += ldc;
+   for (j=0; j < N; j++, C += ldc, iC += M, rC += M)
+   {
+      register int i;
+      for (i=0; i < M; i++)
+      {
+         const register int i2=i+i;
+         C[i2] = rC[i];
+         C[i2+1] = iC[i];
+      }
+   }
+}
+   #else
+static void gecpy(const int M, const int N, const TYPE *bC, TYPE *C, size_t ldc)
+{
+   register int i, j;
+   for (j=0; j < N; j++, C += ldc, bC += M)
+      for (i=0; i < M; i++)
+         C[i] = bC[i];
+}
+   #endif
+#endif
 #ifdef TIME_COPY
 static double getMflops(double m, double n)
 #else
@@ -36676,6 +37117,11 @@ double GetKmmMflop
    TYPE *ep, *sp;  /* extra & set ptrs */
    double t0, t1, mf;
    size_t szA, szB, szC, extra, setsz, nsets, tsz, i, j, incA, incB, incC, n;
+   #ifdef PUTC
+      const size_t ldc=pd->ldc, NMB=pd->nmblks; 
+      size_t mbcnt=0;
+      TYPE *CC=pd->C+(pd->ldc SHIFT)*pd->iam, *cc=CC;
+   #endif
    #ifdef TIME_COPY
       const size_t lda=pd->lda;
       size_t INCBLK, INCPAN, II, JJ, NN, MM;
@@ -36810,15 +37256,31 @@ double GetKmmMflop
       #elif defined(TIME_COPY)
          #ifdef COPY_C
             #ifdef TCPLX
-               COPYK(mb, nb, alpha, c+szC, c, beta, AA, lda);
+               #if TO_BLK
+                  COPYK(mb, nb, alpha, AA, lda, beta, c+szC, c);
+               #else
+                  COPYK(mb, nb, alpha, c+szC, c, beta, AA, lda);
+               #endif
             #else
-               COPYK(mb, nb, alpha, c, beta, AA, lda);
+               #if TO_BLK
+                  COPYK(mb, nb, alpha, AA, lda, beta, c);
+               #else
+                  COPYK(mb, nb, alpha, c, beta, AA, lda);
+               #endif
             #endif
-         #else
+         #else  /* timing A or B copy */
             #ifdef TREAL
-               COPYK(B0, B1, alpha, AA, lda, c);
+               #if TO_BLK
+                  COPYK(B0, B1, alpha, AA, lda, c);
+               #else
+                  COPYK(B0, B1, alpha, c, AA, lda);
+               #endif
             #else
-               COPYK(B0, B1, alpha, AA, lda, c+szC, c);
+               #if TO_BLK
+                  COPYK(B0, B1, alpha, AA, lda, c+szC, c);
+               #else
+                  COPYK(B0, B1, alpha, c+szC, c, AA, lda);
+               #endif
             #endif
          #endif
          aa += INCBLK;
@@ -36833,7 +37295,25 @@ double GetKmmMflop
             }
          }
       #else
-         KMM(mblks, nblks, kb, a, b, c, an, bn, cn);
+         #ifdef ALLTRANS_
+            KMM(nblks, mblks, kb, b, a, c, bn, an, cn);
+         #else
+            KMM(mblks, nblks, kb, a, b, c, an, bn, cn);
+         #endif
+         #ifdef PUTC
+            #ifdef TCPLX
+               gecpy(mb, nb, c+szC, c, cc, ldc);
+            #else
+               gecpy(mb, nb, c, cc, ldc);
+            #endif
+            if (++mbcnt == NMB)
+            {
+               cc = CC;
+               mbcnt = 0;
+            }
+            else
+               cc += mb SHIFT;
+         #endif
       #endif
       a = an;
       b = bn;
@@ -37026,7 +37506,8 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
    kp = malloc(sizeof(struct kmm_struct));
    assert(kp);
    #ifdef TIME_COPY
-      kp->nmblks = kp->nnblks = kp->lda = 2000;
+      kp->nmblks = kp->nnblks = 2000;
+      kp->lda = kp->nmblks | 1;  /* make odd to force align probs */
       #ifdef COPY_C
          kp->COLWISE = 1;
       #else
@@ -37180,7 +37661,7 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
  */
    if (!IGMF)
    {
-      char fn[16] = {'s', 'm', 'f', 'o', 'p', 's', '.', 'f', 'r', 'c', '\0'};
+      char fn[16] = {'s','m','f','l','o','p','s','.','f','r','c','\0'};
       #if defined(DREAL) || defined(DCPLX)
          fn[0] = 'd';
       #endif
@@ -37231,6 +37712,9 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
       const size_t gap = kp->lda - kp->nmblks;
       unsigned int nb;
 
+      kp->BM = kp->mb;
+      kp->BN = kp->nb;
+      @beginskip
       #ifdef TIME_C
       if (ACPY)
       {
@@ -37246,6 +37730,7 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
          kp->BM = kp->mb;
          kp->BN = kp->nb;
       #endif
+      @endskip
       nb = kp->BM;
       kp->nmblks = (kp->nmblks+nb-1)/nb;
       if (!kp->COLWISE)
@@ -37261,6 +37746,15 @@ struct kmm_struct *GetFlags(int nargs, char **args, FILE **fpout)
    #endif
    #ifdef TIME_SYRKK
       kp->movB = 0;
+   #endif
+   #ifdef PUTC
+      i = 2000 / kp->mb;
+      i = (i > 1) ? i : 2;
+      kp->nmblks = i;
+      kp->ldc = (i*kp->mb)|1;
+      i = kp->p * kp->nb;
+      kp->C = malloc(sizeof(TYPE)*kp->ldc*(i SHIFT));
+      assert(kp->C);
    #endif
    return(kp);
 }
@@ -37293,6 +37787,9 @@ int main(int nargs, char **args)
    }
    #endif
    dp = TimeOnCores(kp);
+   #ifdef PUTC
+      free(kp->C);
+   #endif
    free(kp);
    GetStat(p, dp, &min, &max, &avg);
    printf("PER-CORE: %le", dp[0]);
@@ -39532,5 +40029,1840 @@ int main(int nargs, char **args)
    }
    printf(" = %d\n", lcm);
    return(0);
+}
+@ROUT cachesrch
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "atlas_genparse.h"
+#define ulong unsigned long
+#define uint  unsigned int
+#define KSH 10 /* kilo-byte (1024) shift */
+#define MSH 20 /* mega-byte (104857) shift */
+
+int *getPivAndSort(int N, long *szs)
+/*
+ * Finds a pivot that will put szs in order.  Each entry in ipiv says what row
+ * should be swapped to mov the next smallest size into that position.
+ * Sorts szs at same time using selection sort.
+ */
+{
+   int *ipiv;
+   int i;
+
+   ipiv = malloc(sizeof(int)*N);
+   for (i=0; i < N-1; i++)
+   {
+      long minsz = szs[i];
+      int j, imin = i;
+      for (j=i+1; j < N; j++)
+      {
+         long sz = szs[j];
+         if (sz >= minsz)
+            continue;
+         imin = j;
+         minsz = szs[j];
+      }
+      ipiv[i] = imin;
+      if (imin != i)
+      {
+         szs[imin] = szs[i];
+         szs[i] = minsz;
+      }
+   }
+   ipiv[N-1] = N-1;
+   return(ipiv);
+}
+
+void pivFloats(int N, int *ipiv, float *f)
+{
+   int i;
+   N--;
+   for (i=0; i < N; i++)
+   {
+      int k = ipiv[i];
+      if (k != i)
+      {
+         float tmp = f[i];
+         f[i] = f[k];
+         f[k] = tmp;
+      }
+   }
+}
+
+void PrintAllTimes(unsigned int N, unsigned int P, long *szs, float *times,
+                   float *var)
+{
+   int i;
+   for (i=0; i < N; i++)
+   {
+      int j;
+      float *f = times + i;;
+      printf("%7lu", szs[i]>>KSH);
+      for (j=0; j < P; j++, f += N)
+         printf(" %.2e", *f);
+      printf("\n");
+   }
+   if (var)
+   {
+      printf("varian:");
+      for (i=0; i < P; i++)
+         printf(" %.2e", var[i]);
+      printf("\n");
+   }
+}
+
+float smoothRes(unsigned int N, float *fa, float *raw)
+/* 
+ * Logically, small-case performance must always be faster than large.  Results
+ * showing greater time for smaller buffers must be an error due to either
+ * timing variance or due to an associativity problem (which we don't want
+ * to consider here).  Before this call, raw will be sorted by size, so this
+ * routine goes thru raw, and any result that is less than a prior result gets
+ * set to the prior result.
+ * RETURNS: ratio of greatest error to its denominator.
+ */
+{
+   unsigned int i;
+   float errRat = 0.0, max;
+
+   if (N < 2)
+      return(0.0);
+   *fa = max = *raw;
+   for (i=1; i < N; i++)
+   {
+      const float rw = raw[i];
+      if (rw < max)  /* new result less than last */
+      {
+         float er; 
+         fa[i] = max;
+         er = (max - rw) / max;
+         errRat = (errRat >= er) ? errRat : er;
+      }
+      else
+      {
+         fa[i] = raw[i];
+         max = rw;
+      }
+   }
+   return(errRat);
+}
+
+void printRow(unsigned int N, long *szs, float *tim)
+{
+   unsigned int j;
+   if (N < 1)
+      return;
+   if (szs)
+   {
+      printf("%8lu", *szs);
+      for (j=1; j < N; j++)
+         printf(" %8lu", szs[j]);
+      printf("\n");
+   }
+   printf("%.2e", *tim);
+   for (j=1; j < N; j++)
+      printf(" %.2e", tim[j]);
+   printf("\n");
+}
+
+void printCol(unsigned int N, long *szs, float *tim)
+{
+   unsigned int j;
+   if (N < 1)
+      return;
+   if (szs)
+   {
+      printf("%9lu %e\n", *szs, *tim);
+      for (j=1; j < N; j++)
+         printf("%9lu %e\n", szs[j], tim[j]);
+   }
+   else
+   {
+      for (j=0; j < N; j++)
+         printf(" %e\n", tim[j]);
+   }
+}
+
+void *printRes(unsigned int N, long *szs, float *tim)
+{
+   void *ret=szs;
+   unsigned long len;
+   len = (szs) ? 8+(N-1)*9 : N*9;
+   if (len <= 80) /* can it fit in a vt320 window? */
+   {
+      printRow(N, szs, tim);
+      ret=NULL;
+   }
+   else
+      printCol(N, szs, tim);
+   return(ret);
+}
+
+int nextLvl(unsigned int N, float tol, float *tim)
+/*
+ * Compares adjacent times, t0 (smaller size), t1 (larger).  If 
+ * t0*tol < t1, declares it to be a cache level.  We will usually set
+ * tol to something like 1.15, to indicate a less than 15% drop in
+ * performance isn't likely a cache level (associativity effects for instance).
+ * RETURNS: -1 for no detected level, else last in-cache index.
+ */
+{
+   int i;
+   for (i=0; i < N-1; i++)
+      if (tim[i]*tol < tim[i+1])
+         return(i);
+   return(-1);
+}
+
+ulong *readMemWalk(char *fnam, uint *N0, uint *P0, float **RES, float **VAR)
+/*
+ * Reads fnam as results of a search run.  N is the number of sizes, P # cores.
+ * All calls fill in the N*P array RES, and if VAR is set, VAR will be
+ * allocated and filled in with the observed variance in running the smallest
+ * timed case.  NOTE: VAR must be non-null for power-of-two search!
+ * RETURNS: array of sizes in bytes as ulong, NULL if file can't be read.
+ */
+{
+   unsigned long *szs;
+   float *var=NULL, *ra, *f;
+   int *ipiv;
+   FILE *fp;
+   unsigned long varsz;
+   unsigned int P, N, i, j;
+
+   fp = fopen(fnam, "r");
+   if (!fp)
+      return(NULL);
+   assert(fscanf(fp, "%u %u", &P, &N) == 2);
+   assert(N > 1 && P > 0);
+   if (VAR)
+   {
+      var = malloc(P*sizeof(float));
+      assert(var);
+      N--;
+   }
+   ra = malloc(N*P*sizeof(float));
+   szs = malloc(N*sizeof(long));
+   assert(ra && szs);
+
+   if (VAR)
+      assert(fscanf(fp, " %lu", &varsz) == 1);
+   for (i=0; i < N; i++)
+      assert(fscanf(fp, " %lu", szs+i) == 1);
+   ipiv  = getPivAndSort(N, szs);
+   if (VAR)
+      assert(varsz == szs[0]);
+
+   for (f=ra, j=0; j < P; j++, f += N)
+   {
+      if (VAR)
+         assert(fscanf(fp, " %e", var+j) == 1);
+      for (i=0; i < N; i++)
+         assert(fscanf(fp, " %e", f+i) == 1);
+      pivFloats(N, ipiv, f);
+   }
+   fclose(fp);
+   free(ipiv);
+
+   if (VAR)
+      *VAR = var;
+   *P0 = P;
+   *N0 = N;
+   *RES = ra;
+   return(szs);
+}
+
+ulong *doMemWalk(int flg, uint nrep, uint N0, uint NN, uint incN, uint *P0, 
+                 uint *Nt, float **RES, float **VAR)
+/* 
+ * Calls xtmemwalk, doing writes if WRT is set, in range [N0,NN].
+ * Sets:  *P0: # of cores;  *Nt: # of times; *RES: Nt*P timings;
+ *   VAR is NULL if non-power2 search, else variance for smallest size.
+ * RETURNS: all sizes timed.
+ */
+{
+   char *fnam, *cmnd;
+   unsigned long *szs=NULL;
+   unsigned int dlen=2, flen, clen, tlen, i;
+   const int WRT=flg&1, FRC=(flg>>1)&1;
+
+   if (incN)
+      dlen = NumDecDigits(incN) + 1;
+   dlen += NumDecDigits(N0);
+   dlen += NumDecDigits(NN);
+   dlen += NumDecDigits(nrep);
+   flen = 16;
+   clen = 29;
+   tlen = flen + clen + (dlen<<1) + 1;
+   cmnd = malloc(tlen*sizeof(char));
+   assert(cmnd);
+   i = sprintf(cmnd, 
+       "./xtmemwalk -w %u -m %u -S %u %u %u -o res/cachetim%u_%u_%u_%ux%u", 
+               WRT, nrep, N0, NN, incN, WRT, N0, NN, incN, nrep);
+   assert(i < tlen);
+   fnam = cmnd + clen + dlen;
+   printf("fnam='%s' cmnd='%s\n", fnam, cmnd);
+   if (FRC)
+      i = system(cmnd);
+   else
+   {
+      i = 0;
+      szs = readMemWalk(fnam, Nt, P0, RES, VAR);
+      if (!szs)
+         i = system(cmnd);
+   }
+   if (!szs)
+      szs = readMemWalk(fnam, Nt, P0, RES, VAR);
+   if (i || !szs)
+      fprintf(stderr, "\nERROR: cmnd='%s'\n\n", cmnd);
+   assert(!i);
+   free(cmnd);
+   return(szs);
+}
+
+ulong findL1(unsigned int nrep)
+/*
+ * This routine assumes that the maximum L1 data cache size is 128KB.  Since
+ * bandwidth issues should not affect missing the L1 (assuming at least an L2),
+ * we use reads rather than writes so that write-through caches show strong
+ * performance loss when the L1 is exceeded.  In theory, L1 detection could
+ * be as hard as further levels, because it could have pseudo-random
+ * replacement that resists perfection.  Traditionally, L1 caches are
+ * low associativity, and do a good approximiation of LRU, which means we
+ * can find them on most architectures.  Even on modern intel, with high
+ * associativity, the L1 cache is highly perfectable, and so this usually
+ * works even when the larger caches defy precise preciction.  We declare the
+ * first substantial drop in performance to be the L1; in the worst case,
+ * this might be only some part of the L1 due to random replacement, but if
+ * this algorithm sees a drop, so will our gemm, so its still a good enough
+ * guess as long as the drop is repeatable.
+ *
+ * RETURNS: size of detected L1 on all cores in bytes.  If cores had different
+ *          detected L1 sizes, returns 0.
+ */
+{
+   unsigned long *szs, *sz;
+   float *tim, *var, *fa, *f;
+   unsigned long l1sz=0;
+   int P, Nt, j;
+
+   sz = szs = doMemWalk(0, nrep, 2<<KSH, 256<<KSH, 0, &P, &Nt, &tim, &var);
+   fa = malloc(Nt * sizeof(float));
+   assert(fa);
+   f = tim;
+   for (j=0; j < P; j++, f += Nt)
+   {
+      int il1;
+      float tol, t0, v0;
+      v0 = 1.0 + smoothRes(Nt, fa, f);
+      sz = printRes(Nt, sz, fa);
+      t0 = tim[j*Nt];
+      tol = (t0 + var[j])/t0;
+      printf(" --> %u: tol=%.4f v0=%.4f", j, tol*100.0, v0*100.0);
+      tol = (v0 > tol) ? v0 : tol;
+      tol = (tol > 1.1) ? tol : 1.1;
+      il1 = nextLvl(Nt, tol, fa);
+      assert(il1 >= 0 && il1 < Nt);
+      printf(" CacheSz=%lu\n", szs[il1]);
+      if (!l1sz)
+         l1sz = il1;
+      else if (il1 != l1sz)
+      {
+         free(szs);
+         free(fa);
+         free(tim);
+         free(var);
+         return(0);
+      }
+   }
+   l1sz = szs[l1sz];
+   free(szs);
+   free(fa);
+   free(tim);
+   free(var);
+   return(l1sz);
+}
+
+int FindLargestDrop(int P, int Nt, ulong *szs, float *tim, uint ldt, float *var)
+{
+   float *fa, *f;
+   int idx=(-1), MISMATCH=0, j;
+   unsigned long *sz=szs;
+
+   fa = malloc(Nt * sizeof(float));
+   assert(fa);
+   f = tim;
+   for (j=0; j < P; j++, f += ldt)
+   {
+      unsigned int i, ix;
+      float tol, t0, v0, maxgap;
+      v0 = 1.0 + smoothRes(Nt, fa, f);
+      sz = printRes(Nt, sz, fa);
+      t0 = tim[j*Nt];
+      tol = (t0 + var[j])/t0;
+      printf(" --> %u: tol=%.4f v0=%.4f", j, tol*100.0, v0*100.0);
+      tol = (v0 > tol) ? v0 : tol;
+      tol = (tol > 1.1) ? tol : 1.1;
+
+      ix = 0;
+      maxgap = fa[1] - fa[0];
+      for (i=1; i < Nt-1; i++)
+      {
+         const float gap = fa[i+1] - fa[i];
+         if (gap > maxgap)
+         {
+            maxgap = gap;
+            ix = i;
+         }
+      }
+      if (fa[ix]*tol >= fa[ix+1]) /* Is gap meaningful? */
+         ix = -2;                 /* no real cache edge found */
+      printf(" idx=%u\n", ix);
+      if (idx == -1)
+         idx = ix;
+      else if (ix != idx)  /* see if LLC is close enough */
+         MISMATCH = 1;
+   }
+   free(fa);
+   if (MISMATCH)  /* need to see if times are close enough */
+      return(-1); /* for now, freak out */
+   return(idx);
+}
+
+/*
+ * Finding the edge of an LRU cache is easy and precise: you should get constant
+ * performance until the size is reached, at which point you see the perf
+ * of the next level of the heirarchy.  If you plot a series of runs with
+ * chain size on X axis & time/elt on Y, you will see a sharp step, where
+ * each step up corresponds to a memory heirarchy level.
+ *
+ * FIFO replacement will also cleanly miss all lines once it begins missing
+ * in the cache, providing you have doubled the CS between timings, since
+ * we have no reuse in the chain following (LRU & FIFO same w/o reuse).
+ * If the actual cache size is not a power of two (eg, NWAYS=3), then FIFO
+ * will behave differently from LRU, since there was some reuse in one, 
+ * and possibly both, size timings.
+ *
+ * In caches with multiple ways and random replacement, the situation is worse.
+ * You begin to miss in the cache even before you reach the cache size,
+ * because some of your lines randomly conflict even prior to hitting the
+ * cache edge.  Once the size is exceeded, the fact that you throw lines
+ * randomly away means that some lines missing in LRU will be retained.
+ * This results in a steadily declining performance once CS / nways is exceeded.
+ * In this scenario, you should see a series of slopes to new maximums, where
+ * new maxes come from exceeding CS/NWAYS (bringing in more interference),
+ * while the slope comes from an increasing number of conflicts (i.e. in 1st
+ * CS/NWAYS, no conflicts possible, then 2 conflicts poss for first set,
+ * then two for 2nd set, etc., then 3 conflicts possible, etc.).
+ *
+ * For truly random replacement, the cache should be *perfectable*.  The idea
+ * is that you take some data set that does fit in the cache, and you repeatedly
+ * access it.  On the second access, you have unnecessary misses due to random
+ * replacement, and some lines go into the unused ways, but others go into
+ * the used ways, causing some more misses for 3rd access.  If repeated 
+ * enough times, you should eventually get all ways used in the cache just
+ * by random chance, and since you aren't accessing any data outside it,
+ * you stop doing replacement, and now the line between in- and out-of-cache
+ * is sharp.  In practice, this does not seem to work, particularly around
+ * the boundary (trying to distinguish between aggregate cache size of
+ * 2MB+256KB vs 2MB, for instance).  At a guess, OS and other processes
+ * get swapped in, polluting both the instruction & data caches (further
+ * levels are shared, remember), and this is enough to prevent perfecting in
+ * practice.  However, increasing the reps does tend to improve the accuracy,
+ * so tmemwalk takes the -m # arg, which says do the timing # times, and take
+ * the minimum walk time as the result.
+ *
+ * It is therefore pretty much impossible to reliably detect the exact cache
+ * size w/o knowing the number of ways and replacement policy.  We therefore
+ * accept innaccuracy, and time a region between twice the L1 size up to 
+ * 64MB / core, which we assume should be completely out-of-cache.  
+ * We time all powers of 2, using writes during the chain in order to 
+ * maximize bandwidth requirements and thus magnify the gap when the LLC
+ * (last level cache) is exceeded.  We will then take the largest drop in
+ * performance in absolute terms as the effective LLC.  We will then examine
+ * the region between the detected LLC and the L1 to see if there is a 
+ * LLPC (last level private cache).
+ *
+ * Since size refinement doesn't work reliably, we just accept the power-of-two
+ * estimate, which may be correct for pure power-of-two sizes.  On modern
+ * Intel, for instance, caches are exclusive, so it'll miss some stuff.
+ * I.e. on a system with 2MB LLC, and 256 private L2, the real size is
+ * roughly 2MB+246KB, but we'll declare it as 2MB.
+ *
+ * We won't blindly use these cache numbers, but rather tune using them as
+ * bound estimates, so this should be close enough for our needs.
+ */
+ulong findLLC(uint nrep, ulong L1sz, ulong *LLPsz)
+/*
+ * *LLPsz is set to the last level of private cache found, or 0 if we can't find
+ * RETURNS: last-level cache discovered on all cores, or 0 if they disagree
+ */
+{
+   unsigned long *szs;
+   unsigned long LLsz;
+   float *tim, *var;
+   int ilast, ipriv, P, Nt;
+
+   printf("SEARCHING FOR LAST LEVEL OF CACHE\n");
+   szs = doMemWalk(1, nrep, L1sz<<1, 64<<MSH, 0, &P, &Nt, &tim, &var);
+   ilast = FindLargestDrop(P, Nt, szs, tim, Nt, var);
+   assert(ilast < Nt-1);
+   if (ilast >= 0)
+      LLsz = szs[ilast];
+   else
+      LLsz = 0;
+   if (LLsz)
+      printf("LLC ESTIMATED AS %luKB (%luMB).\n", LLsz>>KSH, LLsz>>MSH);
+   else
+      printf("LLC CANNOT BE FOUND.\n");
+   if (LLPsz)
+   {
+      if (ilast > 1 && ilast < Nt-1)
+         ipriv = FindLargestDrop(P, ilast+1, szs, tim, Nt, var);
+      else
+         ipriv = -1;
+
+      if (ipriv >= 0 && ipriv < ilast)
+         *LLPsz = szs[ipriv];
+      else
+         *LLPsz = 0;
+      if (ipriv < ilast && ipriv >= 0)
+         printf("LAST LEVEL OF PRIVATE CACHE ESTIMATED AS: %luKB.\n", 
+                (*LLPsz)>>KSH);
+      else
+         printf("LAST LEVEL OF PRIVATE CACHE CANNOT BE FOUND\n");
+   }
+   free(tim);
+   free(var);
+   free(szs);
+   return(LLsz);
+}
+
+void goToTown(void)
+{
+   unsigned long l1sz, LLsz, LLPsz, cs;
+   unsigned long szs[3];
+   int i, lvl;
+   FILE *fp;
+
+   printf("FINDING THE SIZE OF YOUR L1 DATACACHE:\n");
+   l1sz = findL1(16);
+   if (!l1sz)
+      l1sz = findL1(64);
+   assert(l1sz);
+   printf("L1 SIZE DETECTED AS %lu for all cores.\n", l1sz);
+   LLsz = findLLC(16, l1sz, &LLPsz);
+   if (!LLsz)
+      LLsz = findLLC(64, l1sz, &LLPsz);
+   assert(LLsz);
+
+   fp = fopen("res/atlas_cache.h", "w");
+   assert(fp);
+   fprintf(fp, "/* generated by ATLAS/tune/sysinfo/cachesrch.c */\n");
+   fprintf(fp, "#ifndef ATLAS_CACHE_H\n   #define ATLAS_CACHE_H 1\n\n");
+
+   szs[0] = l1sz; szs[1] = LLPsz; szs[2] = LLsz;
+   for (lvl=0,i=0; i < 3; i++)
+   {
+      cs = szs[i];
+      if (cs)
+      {
+         lvl++;
+         fprintf(fp, "#define L%uC_SZ %lu\n", lvl, cs);
+         fprintf(fp, "#ifdef SREAL\n   #define L%uC_ELTS %lu\n", lvl, cs>>2);
+         fprintf(fp, "#elif defined(DREAL) || defined(SCPLX)\n   "
+                     "#define L%uC_ELTS %lu\n", lvl, cs>>3);
+         fprintf(fp, "#elif defined(DCPLX)\n   #define L%uC_ELTS %lu\n", 
+                 lvl, cs>>4);
+         fprintf(fp, "#endif\n\n");
+      }
+   }
+   i = (szs[1] == 0) ? 1 : 2;
+   fprintf(fp, "#define LLPC_LVL %u\n", i);
+   fprintf(fp, "#define LLPC_SZ  L%uC_SZ\n", i);
+   fprintf(fp, "#define LLPC_ELTS  L%uC_ELTS\n", i);
+   fprintf(fp, "#define LLC_LVL %u\n", ++i);
+   fprintf(fp, "#define LLC_SZ  L%uC_SZ\n", i);
+   fprintf(fp, "#define LLC_ELTS  L%uC_ELTS\n", i);
+   fprintf(fp, "\n#endif /* end multiple inclusion guard */\n");
+   fclose(fp);
+}
+
+int main(int nargs, char **args)
+{
+   FILE *fp;
+/*
+ * Make sure we don't already have result we need
+ */
+   fp = fopen("res/atlas_cache.h", "r");
+   if (fp)
+   {
+      fclose(fp);  /* already have answer */
+      printf("Cache already mapped.  "
+             "Delete res/atlas_cache.h to force research.\n");
+      return(0);   /* so we are done */
+   }
+/*
+ * If we are on an x86, try using cpuinfo to map cache
+ */
+   #if defined(ATL_GAS_x8664) || defined(ATL_GAS_x8632)
+   if (!system("make findCache_x86"))
+      return(0);
+   #endif
+   goToTown();
+   return(0);
+}
+@ROUT tmemwalk
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <unistd.h>
+#define ATL_DEF_RUNTHR 1
+#include "atlas_tprim.h"
+#ifndef MINLS
+   #define MINLS 16        /* smallest cache line size */
+#endif
+#ifndef MAXSZ
+   #define MAXSZ (1<<30)   /* allow at most 2GB total allocation */
+#endif
+#ifndef VARCNT
+   #define VARCNT 8
+#endif
+/*
+ * large mmap calls never succeed for me, unless I allow 0 return, which
+ * doesn't work, obviously.
+ */
+#define NOMAP 1
+#ifndef NOMAP
+   #include <sys/mman.h>
+#endif
+#define ulong unsigned long
+#define KSH 10 /* kilo-byte (1024) shift */
+#define MSH 20 /* mega-byte (104857) shift */
+int DOWRITE=1;
+volatile void *VP=NULL;
+size_t NSZP=0;
+ulong SZ0=0, SZN=0, SZINC=0;
+float *SZTIMES=NULL;
+unsigned int MINREP=16;
+volatile unsigned char chkin[ATL_NTHREADS]={0};
+
+double ATL_walltime(void);
+
+static void my_barrier(int rnk)
+{
+   unsigned char newv = !chkin[rnk];
+   if (rnk)
+   {
+      chkin[rnk] = newv;
+      while (*chkin != newv);
+   }
+   else
+   {
+      unsigned int i;
+      for (i=1; i < ATL_NTHREADS; i++)
+         while (chkin[i] != newv);
+      *chkin = newv;
+   }
+}
+
+volatile void **findAnyNull(size_t N, volatile char *cb)
+{
+   size_t i;
+   for (i=0; i < N; i += MINLS)
+   {
+      volatile void **vp = (volatile void **)(cb+i);
+      if (*vp == NULL)
+         return(vp);
+   }
+   return(NULL);
+}
+unsigned long countNulls(size_t N, volatile char *cb)
+{
+   size_t i;
+   unsigned long cnt=0;
+   for (i=0; i < N; i += MINLS)
+   {
+      volatile void **vp = (volatile void **)(cb+i);
+      if (*vp == NULL)
+         cnt++;
+   }
+   return(cnt);
+}
+
+volatile void **findNull(size_t N, volatile void **b, volatile void **pI)
+/*
+ * Tries to find a NULL ptr near location pI in buffer b
+ */
+{
+   const size_t beg=(size_t)b, end = beg + N-MINLS, p=(size_t)pI;
+   size_t d;
+
+   for (d=MINLS; d < N; d += MINLS)
+   {
+      size_t ad = p + d;
+      volatile void **vp = (volatile void**)ad;
+      if (ad <= end)
+      {
+         if (*vp == NULL)
+            return(vp);
+      }
+      else /* we are past end of array */
+      {
+         size_t ad;
+         if (p <= d)  /* we are past valid memory on low end! */
+            break;    /* and end of array, stop looking */
+         ad = p - d;
+         if (ad < beg)  /* we are past beginning & end of array */
+            break;      /* so stop looking */
+      }
+      if (p > d)
+      {
+         ad = p - d;
+         vp = (volatile void**) ad;
+         if (ad >= beg)
+            if (*vp == NULL)
+               return(vp);
+      }
+   }
+   return(NULL);
+}
+
+void initChain(size_t N, volatile char *b)
+/*
+ * Initializes b with a circular chain of pointers moving between random
+ * locations, and zeros the character next to the pointer.  N is length of b,
+ * and must evenly divide by MINLS.
+ */
+{
+   volatile void **p0, **pn;
+   volatile char *cp;
+   const size_t n = N / MINLS;
+   size_t i;
+   unsigned int seed;
+
+   assert(sizeof(char)+sizeof(void*) <= MINLS);
+   assert(n*MINLS == N);
+/* 
+ * NULL all chain ptrs, and zero char read/write var
+ */
+   cp = b + sizeof(char*);
+   for (i=0; i < N; i += MINLS)
+   {
+      *((char**)(b+i)) = NULL;
+      cp[i] = 0;
+   }
+/*
+ * Now use random jumps to create circular chain that visits all MINLS locations
+ */
+   seed = ((size_t)cp) | N;
+   p0 = (volatile void**) b;
+   for (i=0; i < n-1; i++)
+   {
+      int k;
+      k = rand_r(&seed) % n;
+      *p0 = (volatile void*) 0x1;  /* don't let pn be this loc */
+      pn = (volatile void**)(b + k*MINLS); /* srch pt for next link in chain */
+      if (*pn != NULL) /* can't use this exact spot, find nearby NULL */
+         pn = findNull(N, (volatile void**)b, pn); /* find next link in chain */
+      assert(pn != NULL);
+      assert(*pn == NULL);
+      *p0 = pn;
+      p0 = pn;
+   }
+   *p0 = (volatile void*)b;
+
+   i = countNulls(N, b);
+   if (i)
+   {
+      size_t idx;
+      idx = (size_t) findAnyNull(N, b);
+      idx -= (size_t) b;
+      idx /= MINLS;
+      fprintf(stderr, "FOUND %lu NULLS, first one at %lu out of %lu!\n",
+              (unsigned long)i, (unsigned long)idx, (unsigned long)n);
+      assert(0);
+   }
+}
+
+void printChain(size_t N, char *b)
+{
+   size_t i;
+
+   printf("INDEX:");
+   for (i=0; i < N; i += MINLS)
+      printf("%5lu,", i/MINLS);
+   printf("\n");
+   printf("CHAIN:");
+   for (i=0; i < N; i += MINLS)
+   {
+      char **p = (char**) (b+i);
+      printf("%5lu,", ((unsigned long)(*p - b))/MINLS);
+   }
+   printf("\n\n");
+}
+#define takeChain(N_, p_, r_) \
+{  \
+   size_t i; \
+   void **pp=(void**)(p_); \
+   for (i=0; i < N_; i += MINLS) \
+      pp = *pp; \
+   r_ = (void*)pp; \
+}
+
+#define addChain(N_, p_) \
+{  \
+   size_t i; \
+   void **pp=(void**)(p_); \
+   for (i=0; i < N_; i += MINLS) \
+   {  char *cp=((char*)pp)+sizeof(void*);\
+      *cp += *cp; \
+      pp = *pp; \
+   } \
+}
+
+
+double doTime(int rnk, int nmin, size_t N, volatile char *cp)
+/*
+ * NOTE: fact that we do writes may make it harder to detect write-thru L1,
+ * but makes last-level & shared caches easier to see, and we care more about
+ * these.  We can always do a read-only test for L1 if we want.
+ */
+{
+   double mintime=10e15;
+   size_t r,i;
+   int m;
+/*
+ * Using walltime, so minimum result most accurate (no context switch, etc.)
+ */
+   for (m=0; m < nmin; m++)
+   {
+      double t0;
+      void *vp;
+
+      my_barrier(rnk);            /* agree we are all ready for next timing */
+      if (DOWRITE)
+      {
+         t0 = ATL_walltime();
+         addChain(N, cp);
+         t0 = ATL_walltime() - t0;
+      }
+      else
+      {
+         t0 = ATL_walltime();
+         takeChain(N, cp, vp);
+         t0 = ATL_walltime() - t0;
+         assert(vp);  /* use vp so takeChain not dead code */
+      }
+      mintime = (mintime <= t0) ? mintime : t0;
+      assert (t0 > 0.0);
+   }
+   return(mintime);
+}
+
+void *doWork(void *vp)
+{
+   ATL_thread_t *tp = vp;
+   const int rnk = tp->rank;
+   float *mytim = SZTIMES + NSZP*rnk;
+   volatile char *cp;
+   const size_t N = ((64<<MSH) > SZN) ? (64<<MSH) : SZN;
+   size_t mysz = SZN, nrep=1, cnt=0, nmin=MINREP;
+   size_t i, k;
+   double gapMax=0.0, last;
+
+   cp = VP;
+   cp += SZN * rnk;
+   if (!SZINC)
+   {
+/*
+ *    Loop over decreasing sizes
+ */
+      do
+      {
+/* 
+ *       Reassure auditor we haven't hung; flush i/o before barrier so it
+ *       doesn't affect timings, also so auditor can see it real-time.
+ */
+         if (!rnk)
+         {
+            printf("   attempting to populate the ways . . .\n");
+            fflush(stdout);
+         }
+/*
+ *       In case this fits into some level of high-associativity cache, minimize
+ *       random replacement conflicts by repeatedly reading cache before timing.
+ *       Random replacement can only occur on a miss, and with enough reads you
+ *       could therefore have no misses.  In practice, its a shared i/d cache,
+ *       and other processes are running, so this can't work perfectly.
+ */
+         initChain(mysz, cp);
+         for (k=0; k < VARCNT; k++)
+            assert(!countNulls(mysz, cp));
+         if (!rnk)
+         {
+            printf("   timing %lu KB (%lu MB) with %lu trials.\n", 
+                   (unsigned long)(mysz>>KSH), (unsigned long)(mysz>>MSH), 
+                   (unsigned long) nmin);
+            fflush(stdout);
+         }
+         mytim[cnt++] = doTime(rnk, nmin, N, cp);
+         mysz >>= 1;
+         nrep <<= 1;
+      }
+      while (mysz >= SZ0);
+/*
+ *    Now, measure the variance on in-L1 by retiming the last size VARCNT times
+ *    Ways should already be populated by prior calls.
+ */
+      mysz <<= 1;
+      nrep >>= 1;
+      for (k=0; k < VARCNT; k++)
+      {
+         double t0;
+         t0 = doTime(rnk, nmin, N, cp);
+         if (k)
+         {
+            double gap;
+            gap = t0 - last;
+            if (gap < 0.0)
+               gap = -gap;
+            if (gap > gapMax)
+               gapMax = gap;
+         }
+         last = t0;
+      }
+      mytim[cnt] = gapMax;
+   }
+   else /* doing a search between [SZ0,SZN,SZINC] */
+   {
+      double t0;
+      ulong i, sz=SZ0;
+
+      for (i=0; i < NSZP; i++, sz += SZINC)
+      {
+         int m;
+         if (i == NSZP-1)
+            sz = SZN;
+         nrep = (64<<MSH) / sz;
+         initChain(sz, cp);
+         for (k=0; k < VARCNT; k++)
+            assert(!countNulls(sz, cp));
+         t0 = doTime(rnk, nmin, N, cp);
+         mytim[cnt++] = t0 / nrep;
+      }
+   }
+}
+
+ulong NumSizes(ulong sz0, ulong szN, ulong szInc)
+{
+   size_t cnt=0;
+   if (!szInc)
+   {
+      do
+      {
+         szN >>= 1;
+         cnt++;
+      }
+      while(szN >= sz0);
+   }
+   else
+   {
+      ulong i;
+      for (i=sz0; i < szN; i += szInc)
+         cnt++;
+      cnt++;  /* always timing szN, even if it isn't sz0+X*szInc */
+   }
+   return(cnt);
+}
+
+void PrintUsage(char *name, int ierr, char *flag)
+{
+   if (ierr > 0)
+      fprintf(stderr, "Bad argument #%d: '%s'\n", ierr,
+              flag?flag:"OUT-OF_ARGUMENTS");
+   else if (ierr < 0)
+      fprintf(stderr, "ERROR: %s\n", flag);
+   fprintf(stderr,"USAGE: %s [flags]:\n", name);
+   fprintf(stderr,"   -o <resfile> : (stdout)\n");
+   fprintf(stderr,"   -m <minrepeats> : (8)\n");
+   fprintf(stderr,"   -w 0/1 : don't/do write during buffer traversal\n");
+   fprintf(stderr, 
+      "   -S sz0 szN szINC set szINC=0 for power-of-2 search (default)\n");
+   fprintf(stderr, "   -o <output file>\n");
+   exit(ierr ? ierr : -1);
+}
+
+FILE *GetFlags(int nargs, char **args)
+{
+   unsigned long sz0=4<<KSH, szn=64<<MSH, szinc=0;
+   int mrep=8;
+   FILE *fpout=stdout;
+   int i;
+
+   for (i=1; i < nargs; i++)
+   {
+      if (args[i][0] != '-')
+         PrintUsage(args[0], i, args[i]);
+
+      switch(args[i][1])
+      {
+      case 'o':
+        if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+        fpout = fopen(args[i], "w");
+        assert(fpout);
+        break;
+      case 'w':
+        if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+        DOWRITE = atoi(args[i]);
+        break;
+      case 'm':
+        if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+        mrep = atoi(args[i]);
+        break;
+      case 'S':
+        if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+        sz0 = atol(args[i]);
+        if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+        szn = atol(args[i]);
+        if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+        szinc = atol(args[i]);
+        break;
+      default:
+         PrintUsage(args[0], i, args[i]);
+      }
+   }
+   MINREP = mrep;
+   SZ0 = sz0;
+   SZN = szn;
+   SZINC = szinc;
+   return(fpout);
+}
+
+void *GetMem
+(
+   ulong sz0,  /* low size per thread to try (power of 2) */
+   ulong szN,  /* max size per thread.  Power of 2 in bytes */
+   ulong szInc,/* 0: do power-of-two search, else increment between sizes */
+   ulong pgsz, /* page size.  Core's mem must start on pg bound. */
+   size_t *TSZ /* total size allocated */
+)
+{
+   void *vp;
+   size_t i, totsz;
+   ulong nsz;
+
+   nsz = NumSizes(sz0, szN, szInc);
+   if (!szInc)  /* want large power of two search */
+   {
+      if (szN > (1<<MSH))
+         printf(
+            "Finding size per core I can allocate, starting at size %luMB\n",
+                (unsigned long) (szN>>MSH));
+      else
+         printf(
+            "Finding size per core I can allocate, starting at size %luKB\n",
+                (unsigned long) (szN>>KSH));
+      do
+      {
+         szN = ((szN+pgsz-1)/pgsz)*pgsz;
+         totsz = pgsz + ATL_NTHREADS*(szN + nsz*sizeof(float));
+         vp = NULL;
+         if (totsz <= MAXSZ)
+         {
+            #ifdef NOMAP
+               vp = malloc(totsz);
+            #else
+               vp = mmap(NULL, totsz, PROT_READ|PROT_WRITE, 
+                         MAP_PRIVATE|MAP_ANONYMOUS|MAP_HUGETLB|MAP_LOCKED, 
+                         -1, -1);
+            #endif
+         }
+         szN >>= 1;
+         nsz--;
+      }
+      #ifdef NOMAP
+      while(!vp);
+      #else
+      while (vp == NULL || vp == MAP_FAILED);
+      #endif
+      szN <<= 1;
+      nsz += 2;     /* put back 1, have 1 slot for saving variance timeing */
+      NSZP = nsz;
+      SZN = szN;
+      if (szN > (1<<MSH))
+         printf("Allocated %lu MB per core (%luMB total), NSIZES= %lu.\n", 
+                (unsigned long) (szN>>MSH), (unsigned long) totsz>>MSH,
+                (unsigned long) nsz);
+       else
+         printf("Allocated %lu KB per core (%luKB total), NSIZES= %lu.\n", 
+                (unsigned long) (szN>>KSH), (unsigned long) totsz>>KSH,
+                (unsigned long) nsz);
+   }
+   else /* doing simple range search */
+   {    /* max size already known to work from pwr2 search */
+      totsz = pgsz + ATL_NTHREADS*(szN + nsz*sizeof(float));
+      vp = malloc(totsz);
+      NSZP = nsz;
+      assert(vp);
+   }
+   SZTIMES = vp;
+   i = (size_t) vp;
+   i += nsz * sizeof(float);
+   i = ((i+pgsz-1)/pgsz)*pgsz;
+   VP = (void*)i;
+   *TSZ = totsz;
+   return(vp);
+}
+
+int main(int nargs, char **args)
+{
+   void *vp;
+   unsigned long pgsz;
+   size_t totsz, nsz;
+   FILE *fp;
+
+   fp = GetFlags(nargs, args);
+   pgsz = sysconf(_SC_PAGESIZE);
+   if (pgsz == -1)
+      pgsz = 4096;
+
+   vp = GetMem(SZ0, SZN, SZINC, pgsz, &totsz);
+   @BEGINSKIP
+   initChain(12*MINLS, vp);
+   printChain(12*MINLS, vp);
+   exit(0);
+   @ENDSKIP
+   nsz = NSZP;
+   ATL_runThreads(ATL_NTHREADS, doWork, NULL);
+   if (SZINC)
+   {
+      ulong i, sz=SZ0;
+      for (i=0; i < nsz; i++, sz += SZINC)
+      {
+         int j;
+         sz = (i != nsz-1) ? sz : SZN;
+         printf("%6lu ", (unsigned long)(sz>>KSH));
+         for (j=0; j < ATL_NTHREADS; j++)
+               printf(" %.2e", SZTIMES[i+j*nsz]/sz);
+         printf("\n");
+      }
+   }
+   else
+   {
+      size_t sz;
+      int i;
+      for (sz=SZN, i=0; i < nsz-1; sz>>=1, i++)
+      {
+         int j;
+         printf("%6lu ", (unsigned long)(sz>>KSH));
+         for (j=0; j < ATL_NTHREADS; j++)
+               printf(" %.2e", SZTIMES[i+j*nsz]);
+         printf("\n");
+      }
+      printf("varien:");
+      for (i=0; i < ATL_NTHREADS; i++)
+         printf(" %.2e", SZTIMES[nsz-1+i*nsz]);
+   }
+   printf("\n");
+   if (fp != stderr && fp != stdout)
+   {
+      size_t sz;
+      float *f = SZTIMES;
+
+      if (!SZINC)
+      {
+         int j;
+         fprintf(fp, "%u %lu\n", ATL_NTHREADS, nsz);
+         fprintf(fp, "%lu\n", SZ0);
+         for (sz=SZN; sz >= SZ0; sz >>= 1)
+            fprintf(fp, "%lu\n", sz);
+         fprintf(fp, "\n");
+         for (j=0; j < ATL_NTHREADS; j++, f += nsz)
+         {
+            int i;
+            fprintf(fp, "%e\n", f[nsz-1]);
+            for (i=0; i < nsz-1; i++)
+               fprintf(fp, "%e\n", f[i]);
+            if (j != ATL_NTHREADS-1)
+               fprintf(fp, "\n");
+         }
+      }
+      else
+      {
+         int j;
+         fprintf(fp, "%u %lu\n", ATL_NTHREADS, nsz);
+         fprintf(fp, "%lu\n", SZ0);
+         for (j=0; j < nsz; j++)
+            fprintf(fp, "%lu\n", (j != nsz-1) ? (SZ0+j*SZINC) : SZN);
+         fprintf(fp, "\n");
+         for (j=0; j < ATL_NTHREADS; j++, f += nsz)
+         {
+            int i;
+            for (i=0; i < nsz; i++)
+               fprintf(fp, "%e\n", f[i]);
+            if (j != ATL_NTHREADS-1)
+               fprintf(fp, "\n");
+         }
+      }
+      fclose(fp);
+   }
+   #ifdef NOMAP
+      free(vp);
+   #else
+      munmap(vp, totsz);
+   #endif
+   return(0);
+}
+@ROUT atlas_cpuid.h
+#ifndef ATLAS_CPUID_H
+   #define  ATLAS_CPUID_H 1
+/*
+ * works like cpuid with these reg names.  Note that some inst take eax|ecx
+ * as input, while others take only eax as input.  The number of output regs
+ * also varies by query.
+ */
+#define do_cpuid(eax_, ebx_, ecx_, edx_)  __asm__("cpuid" \
+           :"=a"(eax_), "=b"(ebx_), "=c"(ecx_), "=d"(edx_) \
+           :"a"(eax_), "c"(ecx_) \
+           : )
+#endif
+@ROUT cacheInfo_x86
+/*
+ * Wrote this from gcc manual + http://www.sandpile.org/x86/cpuid.htm
+ * as well as AMD's 25481.pdf (CPUID Specification), and some Intel docs.
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#define KSH 10 /* kilo-byte (1024) shift */
+#define MSH 20 /* mega-byte (104857) shift */
+
+#define do_cpuid(eax_, ebx_, ecx_, edx_)  __asm__("cpuid" \
+           :"=a"(eax_), "=b"(ebx_), "=c"(ecx_), "=d"(edx_) \
+           :"a"(eax_), "c"(ecx_) \
+           : )
+
+#define uint unsigned int
+#define NONE 0xFFFFFFFF
+unsigned int nways_amd(unsigned int t)
+/*
+ * AMD trolling hard by hardwiring in partial lookup table for associativity
+ * and doing it differently for every level.  This is the L3 lookup.
+ * RETURNS: nways, or 0 if fully associative
+ */
+{
+   unsigned int nway;
+   switch (t)     /* AMD asks: why not hardwire assoc in lookup table? */
+   {
+   case 0:        /* no such level */
+      return(NONE);  /* return 0 from caller, don't set any ptrs */
+   case 0x1:
+   case 0x2:
+   case 0x4:
+      nway = t;
+      break;
+   case 0x6:
+      nway = 8;
+      break;
+   case 0x8:
+      nway = 16;
+      break;
+   case 0xA:
+      nway = 32;
+      break;
+   case 0xB:
+      nway = 48;
+      break;
+   case 0xC:
+      nway = 64;
+      break;
+   case 0xD:
+      nway = 96;
+      break;
+   case 0xE:
+      nway = 128;
+      break;
+   case 0xF:
+      nway = 0;
+      break;
+   default:
+      assert(0);
+   }
+   return(nway);
+}
+int IsPow2(uint N)
+/*
+ * returns 1<<i for power of two, or 0 zero or non-power-of-two
+ */
+{
+   int i;
+   if (N == 0)
+      return(0);
+   for (i=0; i & (1<<i); i++); /* find first nonzero */
+   return((((1<<i)^N) == 0) ? i : 0);
+}
+
+unsigned int GetNumPhysCore_amd(void)
+/* 
+ * Returns the number of physical cores on AMD machines supporting 0x80000008.
+ * Will be double the number of FPUs on later archs, unfortunately.
+ * NOTE: already tested 0x80000008 supported before calling.
+ */
+{
+   unsigned int eax, ebx, ecx, edx;
+   eax = 0x80000008;
+   do_cpuid(eax, ebx, ecx, edx);
+   return((ecx&0XFF)+1);
+}
+
+unsigned int SafeGetNumPhysCore_amd(void)
+{
+   unsigned int eax, ebx, ecx, edx;
+   eax = 0x80000000;
+   do_cpuid(eax, ebx, ecx, edx);
+   if (eax >= 0x80000008)
+   {
+      eax = 0x80000008;
+      do_cpuid(eax, ebx, ecx, edx);
+      return((ecx&0XFF)+1);
+   }
+   return(0);
+}
+
+uint cacheInfo_amd(uint lvl, uint *NSET, uint *NWAY, uint *INCL, 
+                   uint *NTHR, uint *NCOR)
+{
+   unsigned int eax, ebx, ecx, edx, LS, nway, nset, t, LPT;
+   unsigned long cs;
+/*
+ * AFAIK, L1 & L2 always private, L3 shared for AMD
+ */
+   if (lvl > 2)  /* AMD CPUID presently only allows up to 3 lvls cache */
+      return(0);
+   ecx = 0;
+   eax = 0x80000005 + (lvl != 0);
+   do_cpuid(eax, ebx, ecx, edx);
+   if (!lvl)  /* hard to overstate the madness of AMD's cpuid: */
+   {          /* they've hardwired the # of cache lvls in! */
+      *INCL = 1;
+      LS = ecx & 0x7F;
+      LPT = (ecx>>8)&0xFF;
+      t = (edx>>16)&0xFF;  /* way encoding */
+      nway = (t == 0x01) ? 1 : (t>>1); /* will fix fully assoc later */
+      cs = (ecx>>24)*1024;
+      if (t == 0xFF)   /* fully associative */
+      {
+         nway = cs / LS;
+         nset = 1;
+      }
+      else
+         nset = cs / (LS*nway);
+   }
+   else /* L2:ecx, L3:edx */
+   {
+      t = (lvl == 1) ? ecx : edx;
+      nway = nways_amd((t>>12)&0xF);
+      if (nway == NONE)  /* if this level of cache not there/disabled */
+         return(0);      /* let caller know */
+      LS = t & 0xFF;
+      LPT = (t>>8)&0xF;
+      if (lvl == 1)           /* L2 deterministic unlike L3 on cache size */
+         cs = (ecx>>16)*1024;
+/*
+ *    For L3, we get i*512KB <= CS <= (i+1)*512KB.  For fully-associative,
+ *    just declare it as the smaller size.  For a given associativity, we
+ *    know nset is a power of two, which can further constrain CS.
+ */
+      else                    /* L3 doesn't fully specify cache size */
+      {                       /* guess low bound unless it doesn't work */
+         cs = (edx>>18)*512*1024; /* minCS is i*512KB, max (i+1)*512KB */
+         if (nway)  /* we can determine nsets */
+         {
+            nset = cs / nway;
+            if (nset*nway != cs) /* if nway not mul of cs, cs not right! */
+               cs += 512*1024;
+            else if (!IsPow2(nset)) /* if nsets not pow2, CS not right! */
+               cs += 512*1024;
+         }
+      }
+      if (!nway)              /* full assoc */
+      {
+         nset = 1;
+         nway = cs / LS;
+      }
+      else                    /* cache with nway-associativity */
+         nset = cs / (LS*nway);
+   }
+/*
+ * AMD has "lines per tag" field, and they never explain what it is beyond
+ * the phrase itself.  AFAIK, lines per tag is 1 in every cache ever made.
+ * only way >1 makes sense to me is if you treat cache like a invalidating
+ * write buffer, where you can load only part of the cacheline, and indicate
+ * some bytes in the line are invalid.  Then, this would represent the number
+ * of valid bits you use.  However, I've never heard of a cache working like
+ * that, and all the AMD docs I see say have this as 0 (invalid cache) or 1.
+ * so, I'm going to assert these cases, and force a probe if this isn't true,
+ * since I'm not sure I understand what LPT really is.
+ */
+   assert(LPT == 0 || LPT == 1);
+   *NWAY = nway;
+   *NSET = nset;
+/*
+ * AFAIK, L1&L2 always private, L3 public for AMD, with all caches except L1
+ * essentially being victim caches (i.e., not inclusive, though not truly
+ * exclusive either).
+ */
+   *INCL = (lvl == 0) ? 1:0;
+   *NTHR = (lvl == 2) ? 2 : 1; /* AFAIK, L1 & L2 private, L3 shared for AMD */
+   *NCOR = SafeGetNumPhysCore_amd();
+   return(LS);
+}
+
+int do_cpuid2Lvl_amd(uint lvl, uint *EAX, uint *EBX, uint *ECX, uint *EDX)
+/*
+ * Loops over AMD's levels, until lvl=lvl in data cache is achieved (L1->lvl=0)
+ * RETURNS: -1 for no such level, else the actual lvl needed by cpuid
+ */
+{
+   int i;
+   int id, tlvl=lvl, glvl, eax, ebx, ecx, edx;
+   do
+   {
+      eax = 0x8000001D;
+      ecx = tlvl++;                  /* keep increasing try lvl til one works */
+      do_cpuid(eax, ebx, ecx, edx);
+      id = eax&0x1F;                 /* cache type info returned about */
+      glvl = (eax>>5)&7;             /* what cache lvl did I get? */
+printf("TRY:id=%u, lvlret=%u, lvlwnt=%u\n", id, glvl, lvl+1);
+      if (!id)                       /* if we are out of cache levels */
+         return(-1);                 /* tell caller no match */
+   }
+   while((id != 1 && id != 3) || glvl != lvl+1);
+   *EAX = eax;
+   *EBX = ebx;
+   *ECX = ecx;
+   *EDX = edx;
+   printf("OK! :id=%u, lvlret=%u, lvlwnt=%u\n", id, glvl, lvl+1);
+   return(glvl);
+}
+
+uint cacheInfo_amdD(uint lvl, uint *NSET, uint *NWAY, uint *INCL, 
+                    uint *NTHR, uint *NCOR)
+/*
+ * This is AMD's more intel-like cache interface, works on newer procs.
+ * RETURNS: 0 for no such level, else line size
+ */
+{
+   unsigned int eax, ebx, ecx, edx, LS, lv;
+   int i;
+
+/*
+ * If we are past the number of cache levels, return 0
+ */
+   if (do_cpuid2Lvl_amd(lvl, &eax, &ebx, &ecx, &edx) == -1)
+      return(0);
+
+   *NCOR = GetNumPhysCore_amd();
+   *NTHR = ((eax>>14)&0xFFF) + 1;
+   *NWAY = (ebx>>22) + 1;
+   *NSET = ecx + 1;
+   *INCL = (edx>>1)&1;
+   LS = (ebx & 0xFFF) + 1;
+   return(LS);
+}
+#define do_cpuid_int(lvl_, o1_, o2_, o3_, o4_)  __asm__("cpuid" \
+           :"=a"(o1_), "=b"(o2_), "=c"(o3_), "=d"(o4_) \
+           :"a"(0x00000004), "c"(lvl_) \
+           : )
+int tlbLookup(unsigned char ch, int *N, long *SZ)
+{
+   unsigned lv=0;  /* 0 means not about TLB, else lvl of data TLB described */
+   switch(ch)
+   {
+   case 0x3:
+      *N = 64;
+      *SZ = 4<<KSH;
+      return(1);
+   case 0x4:
+      *N = 8;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0x5:
+      *N = 32;
+      *SZ = 4<<MSH;
+      return(2);
+   case 0x56:
+      *N=16;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0x57:
+   case 0x59:
+      *N=16;
+      *SZ = 4<<KSH;
+      return(1);
+   case 0x5A:
+      *N=32;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0x5B:
+      *N=64;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0x5C:
+      *N=128;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0x5D:
+      *N=256;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0x63:
+      *N=32+4;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0x64:
+      *N=512;
+      *SZ = 4<<KSH;
+      return(1);
+   case 0xa0:
+      *N=32;
+      *SZ = 4<<KSH;
+      return(1);
+   case 0xb3:
+      *N=128;
+      *SZ = 4<<KSH;
+      return(1);
+   case 0xb4:
+      *N=256;
+      *SZ = 4<<KSH;
+      return(2);
+   case 0xba:
+      *N=64;
+      *SZ = 4<<KSH;
+      return(2);
+   case 0xc0:
+      *N=8;
+      *SZ = 4<<MSH;
+      return(1);
+   case 0xc1:
+      *N=1024;
+      *SZ = 2<<MSH;
+      return(-2);  /* shared L2 TLB */
+   case 0xc2:
+      *N=16;
+      *SZ = 2<<MSH;
+      return(0);
+   case 0xc3:
+      *N=1536+16;
+      *SZ = 2<<MSH;
+      return(-2);  /* shared L2 TLB */
+   case 0xc4:
+      *N=32;
+      *SZ = 2<<MSH;
+      return(1);
+   case 0xca:
+      *N=512;
+      *SZ = 4<<KSH;
+      return(-3);  /* shared L3 TLB */
+   default:
+      return(0);
+   }
+   return(0);
+}
+uint tlbInfo_int(uint *NPRV, uint **NTLBs)
+/* 
+ * *NPRIV: number of private levels: *NPRIV <= return
+ * *NTLB : ptr to array of TLB entry counts for all levels
+ * RETURNS: ntlb levels, and thus number of entries in *NTLB
+ */
+{
+   unsigned int i=0, nprv=0, nlvl=0;
+   static int Ns[3] = {0,0,0};
+   unsigned int regs[4];
+   unsigned char *byts=(unsigned char*)regs;
+
+   do
+   {
+      unsigned int k;
+
+      regs[0] = 2;
+      do_cpuid(regs[0], regs[1], regs[2], regs[3]);
+      for (k=1; k < 16; k++)
+      {
+         int lv, ntlb;
+         long pgsz;   /* value unused for now */
+         lv = tlbLookup(byts[k], &ntlb, &pgsz); 
+         if (!lv)
+            continue;
+         if (lv > 0)
+            nprv = (lv > nprv) ? lv:nprv;
+         else
+            lv = -lv;
+         assert(lv < 4);
+         nlvl = (lv > nlvl) ? lv:nlvl;
+         Ns[lv-1] += ntlb;
+      }
+   }
+   while (++i < byts[0]);
+
+   *NTLBs = Ns;
+   *NPRV = nprv;
+   return(nlvl);
+}
+
+uint cacheInfo(uint lvl, uint *NSET, uint *NWAY, uint *INCL, 
+               uint *NTHR, uint *NCOR)
+/*
+ * RETURNS: 0 for no such level, else line size
+ */
+{
+   unsigned int eax, ebx, ecx, edx, LS, lv;
+
+   do_cpuid_int(lvl, eax, ebx, ecx, edx);
+/*
+ * If we are past the number of cache levels, return 0
+ */
+   if ((eax&0xF) == 0)
+      return(0);
+/*
+ * On some systems, lvl=1 is L1 instruction cache, so check if the level 
+ * returned (starting from 0) doesn't match the query, and if so query next
+ * level, and then assert it matches
+ */
+   lv = (eax>>5)&7;
+   if (lv != lvl+1)  /* lvl=1 is i-cache, meaning we must ask for next lvl */
+   {
+      do_cpuid_int(lvl+1, eax, ebx, ecx, edx);
+      if ((eax&0xF) == 0)
+         return(0);
+      lv = (eax>>5)&7;
+   }
+   assert(lv == lvl+1);
+
+   *NCOR = ((eax>>26)&0x3F) + 1;
+   *NTHR = ((eax>>14)&0xFFF) + 1;
+   *NSET = ecx + 1;
+   *NWAY = (ebx>>22) + 1;
+   *INCL = (edx>>1)&1;
+   LS = (ebx & 0xFFF) + 1;
+   return(LS);
+}
+
+void PrintUsage(char *name, int ierr, char *flag)
+{
+   if (ierr > 0)
+      fprintf(stderr, "Bad argument #%d: '%s'\n", ierr,
+              flag?flag:"OUT-OF_ARGUMENTS");
+   else if (ierr < 0)
+      fprintf(stderr, "ERROR: %s\n", flag);
+   fprintf(stderr,"USAGE: %s [flags]:\n", name);
+   fprintf(stderr,"   -o </path/cacheheader.h> : (res/atlas_cache.h)\n");
+   exit(ierr ? ierr : -1);
+}
+
+FILE *GetFlags(int nargs, char **args)
+{
+   FILE *fpout=NULL;
+   int i;
+
+   for (i=1; i < nargs; i++)
+   {
+      if (args[i][0] != '-')
+         PrintUsage(args[0], i, args[i]);
+
+      switch(args[i][1])
+      {
+      case 'o':
+        if (++i >= nargs)
+            PrintUsage(args[0], i-1, NULL);
+        fpout = fopen(args[i], "w");
+        assert(fpout);
+        break;
+      default:
+         PrintUsage(args[0], i, args[i]);
+      }
+   }
+   if (!fpout)
+   {
+      fpout = fopen("res/atlas_cache.h", "w");
+      assert(fpout);
+   }
+   return(fpout);
+}
+
+void *getInf(void)
+/*
+ * Determines whether to use AMD or Intel method to determine caches
+ */
+{
+   int eax, ebx, ecx, edx;
+   eax=0;
+   do_cpuid(eax, ebx, ecx, edx);
+   printf("cpu0: %x %x %x %x\n", eax, ebx,edx,ecx);  
+   
+   if (ebx == 0x756e6547 && edx == 0x49656e69 && ecx == 0x6c65746e &&
+       eax >= 4)
+      return(cacheInfo);  /* Spells out GenuineIntel in little endian hex */
+   if (ebx == 0x68747541 && edx == 0x69746e65 && ecx == 0x444d4163)
+   {  /* Spells out AuthenticAMD in little endian hex */
+      eax = 0x80000000;
+      do_cpuid(eax, ebx, ecx, edx);
+      printf("eax=%x want=%x, gap=%d\n", eax, 0x8000001D, eax-0x8000001D);
+      if (eax >= 0x8000001D)
+         return(cacheInfo_amdD);
+      else if (eax >= 0x80000006)
+         return(cacheInfo_amd);
+   }
+   return(NULL);
+}
+/*
+ * This file either uses CPUID to determine the caches, or dies with 
+ * assertion failed.  If this routine fails to run or build, we instead
+ * run cachesearch to empirically estimate main cache features.
+ */
+int main(int nargs, char **args)
+{
+   unsigned int nset, nway, LS, INCL, nthr, ncor=0, nlvl=1;
+   unsigned int nhyp=1, safeLS, LLP, i;
+   unsigned long cs, llp_cs, llp_prev_cs;
+   FILE *fp;
+   char *cn[2]={"LLPC", "LLC"};
+   int lvls[2];
+   uint (*cacheInf)(uint lvl, uint *NSET, uint *NWAY, uint *INCL,
+                   uint *NTHR, uint *NCOR);
+
+/*
+ * See if we are using Intel or AMD-style cacheInfo, or giving up
+ */
+   cacheInf = getInf();
+   assert(cacheInf != NULL);
+/*
+ * OK, on system where this method should work, create atlas_cache.h
+ */
+   fp = GetFlags(nargs, args);
+   fprintf(fp, "/* generated by ATLAS/tune/sysinfo/cacheInfo_x86.c */\n");
+   fprintf(fp, "#ifndef ATLAS_CACHE_H\n   #define ATLAS_CACHE_H 1\n");
+/*
+ * For L1Size, figure out number of cores that are really hyperthreading
+ */
+   LS = cacheInf(0, &nset, &nway, &INCL, &nhyp, &ncor);
+   assert(LS);
+   llp_prev_cs = llp_cs = cs = nset*nway*LS;
+   printf("L1: INCL=%d nsets=%u, nway=%u LS=%u sz=%u"
+          ", hypthr=%u, ncores=%u\n", 
+          INCL, nset, nway, LS, nset*nway*LS, nhyp, ncor);
+   fprintf(fp, "#define x86_NHYPTHR %u /* hyperthreading number */\n", nhyp);
+   fprintf(fp, "#define x86_NCORPAK %u /* ncores per package */\n\n", ncor);
+   fprintf(fp, "#define L1C_SZ %luL\n", cs);
+   fprintf(fp, "#define L1C_LS %u\n", LS);
+   fprintf(fp, "#define L1C_NSET %u\n", nset);
+   fprintf(fp, "#define L1C_NWAY %u\n", nway);
+   fprintf(fp, "#define L1C_INCLUSIVE 1\n");
+   fprintf(fp, "#define L1C_NSHARE 1\n");
+   fprintf(fp, "#define L1C_SURE 1\n");
+   fprintf(fp, "#ifdef SREAL\n   #define L1C_ELTS %lu\n", cs>>2);
+   fprintf(fp, "   #define L1C_LSELTS %u\n", LS>>2);
+   fprintf(fp, "#elif defined(DREAL) || defined(SCPLX)\n   "
+               "#define L1C_ELTS %lu\n", cs>>3);
+   fprintf(fp, "   #define L1C_LSELTS %u\n", LS>>3);
+   fprintf(fp, "#elif defined(DCPLX)\n   #define L1C_ELTS %lu\n", cs>>4);
+   fprintf(fp, "   #define L1C_LSELTS %u\n", LS>>4);
+   fprintf(fp, "#endif\n\n");
+   safeLS = LS;
+   LLP = 0;
+
+/*
+ * First find the number of levels, and whether there is a hyperthreading
+ * multiplier on the ncores sharing cache or not
+ */
+   while ( (LS = cacheInf(nlvl, &nset, &nway, &INCL, &nthr, &ncor)) )
+   {
+      nlvl++;
+      nthr /= nhyp;
+      cs = nset*nway*LS;
+      printf("L%u: INCL=%d nsets=%u, nway=%u LS=%u sz=%lu (%lu) nshar=%u\n",
+             nlvl, INCL, nset, nway, LS, cs, cs/nthr, nthr);
+      if (nthr > 1)  /* we want per-node size */
+         cs /= nthr;
+      fprintf(fp, "#define L%uC_SZ %luL\n", nlvl, cs);
+      fprintf(fp, "#define L%uC_LS %u\n", nlvl, LS);
+      fprintf(fp, "#define L%uC_NSET %u\n", nlvl, nset);
+      fprintf(fp, "#define L%uC_NWAY %u\n", nlvl, nway);
+      fprintf(fp, "#define L%uC_INCLUSIVE %u\n", nlvl, INCL);
+      fprintf(fp, "#define L%uC_NSHARE %u\n", nlvl, nthr);
+      fprintf(fp, "#define L%uC_SURE 1\n", nlvl);
+      fprintf(fp, "#ifdef SREAL\n   #define L%uC_ELTS %luL\n", nlvl, cs>>2);
+      fprintf(fp, "   #define L%uC_LSELTS %u\n", nlvl, LS>>2);
+      fprintf(fp, "#elif defined(DREAL) || defined(SCPLX)\n   "
+                  "#define L%uC_ELTS %luL\n", nlvl, cs>>3);
+      fprintf(fp, "   #define L%uC_LSELTS %u\n", nlvl, LS>>3);
+      fprintf(fp, "#elif defined(DCPLX)\n   #define L%uC_ELTS %luL\n", 
+              nlvl, cs>>4);
+      fprintf(fp, "   #define L%uC_LSELTS %u\n", nlvl, LS>>4);
+      fprintf(fp, "#endif\n\n");
+      safeLS = (LS > safeLS) ? LS : safeLS;
+      if (nthr == 1)
+      {
+         llp_prev_cs = llp_cs;
+         LLP = nlvl;
+         llp_cs = cs;
+      }
+   }
+   fprintf(fp, "#define LLPC_LVL %u\n", LLP);
+   fprintf(fp, "#define LLPC_SZ  L%uC_SZ\n", LLP);
+   fprintf(fp, "#define LLPC_LSELTS L%uC_LSELTS\n", LLP);
+   fprintf(fp, "#define LLC_LVL %u\n", nlvl);
+   fprintf(fp, "#define LLC_LSELTS L%uC_LSELTS\n", nlvl);
+   if (INCL)
+   {
+      fprintf(fp, "#define LLC_SZ   L%uC_SZ\n", nlvl);
+      fprintf(fp, "#define LLC_ELTS L%uC_ELTS\n", nlvl);
+   }
+   else
+   {
+      unsigned long sz;
+      sz = (LLP == nlvl) ? cs+llp_prev_cs : cs+llp_cs;
+      fprintf(fp, "#define LLC_SZ %luL\n", cs+llp_prev_cs);
+      fprintf(fp, "#ifdef SREAL\n   #define LLC_ELTS %luL\n", sz>>2);
+      fprintf(fp, "#elif defined(DREAL) || defined(SCPLX)\n   "
+                  "#define LLC_ELTS %luL\n", sz>>3);
+      fprintf(fp, "#elif defined(DCPLX)\n   #define LLC_ELTS %luL\n", 
+              sz>>4);
+      fprintf(fp, "#endif\n\n");
+   }
+   fprintf(fp, "#define ATL_SAFELS %u\n", safeLS);
+   {
+      unsigned int *tlbs, ntlbL, nprv, ttlb=0, tptlb=0;
+
+      ntlbL = tlbInfo_int(&nprv, &tlbs);
+      fprintf(fp, "\n#define TLB_PLVLS %u\n", nprv);
+      fprintf(fp, "#define TLB_LVLS %u\n", ntlbL);
+      for (i=0; i < ntlbL; i++)
+      {
+         fprintf(fp, "#define NTLB%u %u\n", i, tlbs[i]);
+         tptlb += (i < nprv) ? tlbs[i] : 0;
+         ttlb += tlbs[i];
+      }
+      fprintf(fp, "#define TOTPTLB %u\n", tptlb);
+      fprintf(fp, "#define TOTTLB %u\n", ttlb);
+   }
+
+   fprintf(fp, "\n#endif /* done multiple inclusion guard */\n");
+   fclose(fp);
+   return(0);
+}
+@ROUT GetInfoPos
+int main(int nargs, char **args)
+{
+   long pgsz;
+   pgsz = sysconf(_SC_PAGESIZE);
 }
 @ROUT !

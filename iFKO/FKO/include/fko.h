@@ -18,7 +18,8 @@
          fprintf(stderr, \
                  "\n\nassertion '%s' failed on line %d of %s, hanging:\n\n", \
                  Mstr(arg_), __LINE__, __FILE__);\
-         while(1); \
+         /*while(1);*/ \
+         exit(-1); \
       } \
    }
    #define assert MyAssert
@@ -58,12 +59,14 @@
 
     int FKO_UR=0; /* unroll factor */
     int FKO_SB=0; /* stronger bet unroll factor */
+    RTMARKUP rtmu;
 #else
    extern BBLOCK *bbbase;
    extern char rout_name[128];
    extern int rout_flag, FKO_FLAG;
    extern int CFU2D, CFDOMU2D, CFUSETU2D, INUSETU2D, INDEADU2D;
    extern int CFLOOP, FKO_UR, FKO_SB;
+   extern RTMARKUP rtmu;
 #endif
 
 #define IRET_BIT 0x1
@@ -82,6 +85,9 @@
 #define IFF_3DNOWW       0x200 /* use 3DNow! for L1 write prefetch */
 #define IFF_VERBOSE      0x400 /* verbose output */
 #define IFF_OPT2DPTR     0x800 /* optimize 2d array access with min reg & ptr */
+#define IFF_NODDE        0x1000 /* optimize 2d array access with min reg & ptr */
+#define IFF_BESTVEC      0x2000 /*analyze all vector methods and apply best one*/
+#define IFF_SHOWCOMMENTS 0x4000  /* show all comments in code, by default off */
 /*
  * Majedul: 
  *    As we will introduce more and more new optimizations, I will keep 
@@ -112,5 +118,6 @@ int GetPtrType(void);
 void UpdatePrefetchInfo();
 void RestoreFKOState0();
 void SaveFKOState0();
-
+int IsPtrMinPossible(BLIST *scope);
+int IsSimpleLoopNestVec(int vflag);
 #endif

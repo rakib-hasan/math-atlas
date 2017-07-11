@@ -23,7 +23,7 @@
 #include "atlas_rblas3.h"
 #include "atlas_kernel3.h"
 #include "atlas_lvl3.h"
-#include Mstr(Mjoin(Mjoin(atlas_,PRE),geamm_perf.h))
+@skip #include Mstr(Mjoin(Mjoin(atlas_,PRE),opsq_perf.h))
 @skip
 @skip ==================================================================
 @skip
@@ -37,7 +37,7 @@
 @extract @(LV3_INCLUDE) 
 
 #ifndef @up@(dn)_NB
-   #define @up@(dn)_NB ATL_sqAMM_66KB
+   #define @up@(dn)_NB 48
 #endif
 
 void @(rname)
@@ -125,7 +125,7 @@ void @(rname)
 @extract @(LV3_INCLUDE)
  
 #ifndef @up@(dn)_NB
-   #define @up@(dn)_NB ATL_sqAMM_LASTKB
+   #define @up@(dn)_NB 48
 #endif
 
 void @(rname)
@@ -247,10 +247,10 @@ void @(rname)
 @rout ATL_herk
 @define dn @herk@
 @rout ATL_syrk ATL_herk
-@define rname @Mjoin( PATL, @(dn) )@
+@define rname @Mjoin( PATL, @(dn)_APR )@
 @extract @(VER_ATLAS_SRC) -def contributor "@(clint)"
 @extract @(LV3_INCLUDE)
-#if 1 /* ndef USE_AMM */
+#if 0 /* ndef USE_AMM */
    #include Mstr(Mjoin(ATLAS_PRE,amm_syrk.h))
    #undef SYRK_NB  /* present gmmsearch tuning not reliable (no cpy cost) */
    #if defined(ATL_sqAMM_LASTNB)
@@ -265,7 +265,7 @@ void @(rname)
 @rout ATL_syrk ATL_herk
 #else
    #ifndef @up@(dn)_NB
-      #define @up@(dn)_NB 1200
+      #define @up@(dn)_NB 48
    #endif
 #endif
 
@@ -304,11 +304,13 @@ void @(rname)
    RC3_FUN_@up@(dn)_T            ATL_r@(dn);
    RC3_@up@(dn)_T                type;
 @extract @(EXECUTABLE_STATEMENT)
+   @BEGINSKIP
    if (K == 1 || N == 1)   /* don't recur for L1/2 BLAS case */
    {  /* just call kernel that handles these cases correctly */
-      Mjoin(PATL,@(dn)_IP)(UPLO, TRANS, N, K, ALPHA, A, LDA, BETA, C, LDC);
+      Mjoin(PATL,@(dn)_amm)(UPLO, TRANS, N, K, ALPHA, A, LDA, BETA, C, LDC);
       return;
    }
+   @ENDSKIP
 @rout ATL_syrk
    if( ( N == 0 ) ||
        ( ( SCALAR_IS_ZERO( ALPHA ) || ( K == 0 ) ) && SCALAR_IS_ONE( BETA ) ) )
@@ -325,11 +327,13 @@ void @(rname)
    alpha     = (TYPE *)(ALPHA);   beta     = (TYPE *)(BETA);
 #endif
 @rout ATL_herk
+   @BEGINSKIP
    #if defined (USE_SPRK)
       Mjoin(PATL,hprk)(PackGen, TRANS, UPLO, 0, N, K, ALPHA, A, 0, 0, LDA,
                        BETA, C, 0, 0, LDC);
       return;
    #endif
+   @ENDSKIP
    if( ( N == 0 ) ||
        ( ( ( ALPHA == ATL_rzero ) || ( K == 0 ) ) && ( BETA == ATL_rone ) ) )
       return; 
@@ -400,7 +404,7 @@ void @(rname)
 @skip MODIFIED BY RCW TO MAKE IT RECUR TO 1 FOR CPLX, TO 4 FOR LEFT
 @rout ATL_trmm
 #ifndef @up@(dn)_NB
-   #define @up@(dn)_NB ATL_sqAMM_66KB
+   #define @up@(dn)_NB 48
 #endif
 @rout ATL_trsm
 #ifndef TRSM_NB
@@ -719,8 +723,8 @@ AINCLUDES = \
    $(INCSdir)/atlas_rblas3.h   $(INCSdir)/atlas_kernel3.h \
    $(INCSdir)/atlas_lvl3.h     $(INCSdir)/atlas_level3.h
 @whiledef pre_ z c d s
-@up@(pre_)INCLUDES = \
-   $(AINCLUDES) $(INCAdir)/atlas_@(pre_)geamm_perf.h
+@up@(pre_)INCLUDES = $(AINCLUDES)
+@skip   $(AINCLUDES) $(INCAdir)/atlas_@(pre_)opsq_perf.h
 @endwhile
 #
 ## Object files ########################################################

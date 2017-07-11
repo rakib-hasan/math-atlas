@@ -1,8 +1,8 @@
-Clock_rate=2300 Mhz
+Clock_rate=1700 Mhz
 % clock      MFLOP  ROUTINE/PROBLEM
 =======  =========  ===============
-  252.7     5812.0  kgemvN
-  268.8     6183.0  kgemvT
-  202.8     4664.7  kger1
-  319.8     7356.2  kger2
- 1477.3    33976.9  kgemm
+  192.9     3279.2  kgemvN
+  204.7     3479.9  kgemvT
+  140.5     2388.2  kger1
+  230.3     3914.5  kger2
+ 1129.8    19206.0  kgemm
